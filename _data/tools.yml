@@ -15,6 +15,14 @@
   note: Simpan daftar tamu lebih dulu, lalu kirim satu per satu. Progres tersimpan di browser.
   privacy: Daftar tamu dan template pesan disimpan di localStorage perangkatmu. Tidak ada data yang dikirim ke server kami.
 
+- slug: tulis-tenang
+  title: Tulis Tenang
+  description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau paragraf.
+  group: Teks
+  icon: pencil
+  note: Draf disimpan otomatis di browser. Gunakan mode Kalimat atau Paragraf untuk meredupkan bagian lain saat menulis.
+  privacy: Tulisan disimpan di localStorage perangkatmu. Tidak ada data yang dikirim ke server.
+
 - slug: text-obfuscator
   title: Text Obfuscator
   description: Samarkan teks mulai dari paragraf tertentu. Berguna untuk cuplikan atau pratinjau.

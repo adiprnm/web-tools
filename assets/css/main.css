@@ -1477,6 +1477,238 @@ textarea.input--mono {
 }
 
 /* ------------------------------------------------------------
+   Writing room
+   ------------------------------------------------------------ */
+
+.writing-room {
+  max-width: none;
+  margin-inline: 0;
+}
+
+.writing-room-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.writing-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.segmented {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.seg {
+  padding: 5px 10px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+}
+
+.seg + .seg {
+  border-left: 1px solid var(--line);
+}
+
+.seg:hover {
+  color: var(--ink);
+  background: var(--surface-muted);
+}
+
+.seg[aria-pressed="true"],
+.seg[aria-pressed="true"]:hover {
+  color: var(--surface);
+  background: var(--ink);
+}
+
+.writing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.writing-stage {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.writing-stage:focus-within {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.writing-area,
+.writing-mirror {
+  display: block;
+  margin: 0;
+  padding: clamp(20px, 4vw, 32px);
+  font-family: var(--font-sans);
+  font-size: clamp(1.05rem, 1.7vw, 1.15rem);
+  line-height: 1.85;
+  letter-spacing: -0.005em;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.writing-area {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  min-height: 56vh;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 2px;
+  outline: none;
+  caret-color: var(--accent);
+  resize: none;
+  overflow: hidden;
+}
+
+.writing-area:focus-visible {
+  outline: none;
+}
+
+.writing-area::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.writing-area::selection {
+  background: rgba(228, 87, 46, 0.18);
+}
+
+.writing-mirror {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: none;
+  color: var(--ink);
+  pointer-events: none;
+}
+
+.writing-stage.is-focus:not(.is-empty) .writing-area {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.writing-stage.is-focus:not(.is-empty) .writing-area::selection {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background: rgba(228, 87, 46, 0.18);
+}
+
+.writing-stage.is-focus:not(.is-empty) .writing-mirror {
+  display: block;
+}
+
+.writing-dim {
+  color: #b9c0b8;
+}
+
+.writing-active {
+  color: var(--ink);
+}
+
+.writing-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.writing-stats strong {
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.writing-saved {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+/* Fullscreen and the no-Fullscreen-API fallback */
+
+.writing-room:fullscreen {
+  width: 100%;
+  max-width: none;
+  padding: clamp(18px, 4vw, 44px);
+  overflow: auto;
+  background: var(--paper);
+}
+
+.writing-room:fullscreen .writing-room-inner,
+body.is-zen #writing-room .writing-room-inner {
+  display: flex;
+  flex-direction: column;
+  max-width: 760px;
+  min-height: calc(100vh - clamp(36px, 8vw, 88px));
+  margin-inline: auto;
+}
+
+.writing-room:fullscreen .writing-stage,
+body.is-zen .writing-stage {
+  flex: 1;
+}
+
+.writing-room:fullscreen .writing-area,
+body.is-zen .writing-area {
+  min-height: 60vh;
+}
+
+body.is-zen {
+  overflow: hidden;
+}
+
+body.is-zen .site-header,
+body.is-zen .site-footer,
+body.is-zen .crumbs,
+body.is-zen .tool-header,
+body.is-zen .tool-aside {
+  display: none;
+}
+
+body.is-zen .tool-shell {
+  width: 100%;
+  padding: 0;
+}
+
+body.is-zen .tool-body {
+  padding: 0;
+}
+
+body.is-zen .tool-main {
+  padding: 0;
+  border: 0;
+}
+
+body.is-zen #writing-room {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  width: 100%;
+  max-width: none;
+  padding: clamp(18px, 4vw, 44px);
+  overflow: auto;
+  background: var(--paper);
+}
+
+/* ------------------------------------------------------------
    Responsive
    ------------------------------------------------------------ */
 
@@ -1547,6 +1779,31 @@ textarea.input--mono {
 
   .actions--end {
     justify-content: flex-start;
+  }
+
+  .writing-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .writing-area,
+  .writing-mirror {
+    padding: 18px;
+    font-size: 1.02rem;
+    line-height: 1.8;
+  }
+
+  .writing-area {
+    min-height: 50vh;
+  }
+
+  .writing-stats {
+    gap: 10px;
+  }
+
+  .writing-saved {
+    width: 100%;
+    margin-left: 0;
   }
 }
 

@@ -1,0 +1,36 @@
+---
+layout: tool
+tool: tulis-tenang
+title: Tulis Tenang
+description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau paragraf.
+---
+<div class="writing-room" id="writing-room">
+  <div class="writing-room-inner">
+    <div class="writing-toolbar">
+      <div class="segmented" role="group" aria-label="Mode fokus">
+        <button type="button" class="seg" data-focus="off" aria-pressed="true">Mati</button>
+        <button type="button" class="seg" data-focus="sentence" aria-pressed="false">Kalimat</button>
+        <button type="button" class="seg" data-focus="paragraph" aria-pressed="false">Paragraf</button>
+      </div>
+      <div class="writing-actions">
+        <button type="button" class="btn btn--quiet btn--small" id="writing-fullscreen">Layar penuh</button>
+        <button type="button" class="btn btn--quiet btn--small" id="writing-download">Unduh .txt</button>
+        <button type="button" class="btn btn--quiet btn--small" id="writing-new">Baru</button>
+      </div>
+    </div>
+
+    <div class="writing-stage" id="writing-stage">
+      <div class="writing-mirror" id="writing-mirror" aria-hidden="true"></div>
+      <textarea class="writing-area" id="writing-area" spellcheck="true" lang="id" placeholder="Mulai menulis…" aria-label="Area tulisan"></textarea>
+    </div>
+
+    <div class="writing-stats">
+      <span><strong id="writing-words">0</strong> kata</span>
+      <span><strong id="writing-chars">0</strong> karakter</span>
+      <span><strong id="writing-minutes">0</strong> menit baca</span>
+      <span class="writing-saved" id="writing-saved" role="status" aria-live="polite">Siap</span>
+    </div>
+  </div>
+</div>
+
+<script src="{{ '/tulis-tenang/main.js' | relative_url }}" defer></script>

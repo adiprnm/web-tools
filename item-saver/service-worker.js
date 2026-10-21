@@ -1,4 +1,4 @@
-var CACHE_NAME = "item-saver-v4";
+var CACHE_NAME = "item-saver-v5";
 var ASSETS = [
   "/item-saver/",
   "/item-saver/icon.svg",
