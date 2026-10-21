@@ -6,6 +6,7 @@
   var SAVE_DELAY = 500;
   var WORDS_PER_MINUTE = 200;
   var FOCUS_MODES = ["off", "sentence", "paragraph"];
+  var isFirefoxMobile = /Firefox|FxiOS/i.test(navigator.userAgent) && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   var sentenceSegmenter = null;
   try {
@@ -233,6 +234,10 @@
       if (!probeInserted) mirror.appendChild(makeProbe());
     }
 
+    function isZenActive() {
+      return document.body.classList.contains("is-zen") || document.body.classList.contains("is-zen-flow");
+    }
+
     function scrollContainer() {
       return document.body.classList.contains("is-zen") ? room : null;
     }
@@ -266,7 +271,9 @@
 
       var viewport = window.visualViewport;
       var viewTop = viewport ? viewport.offsetTop : 0;
-      var viewBottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight;
+      var viewBottom = viewport
+        ? Math.min(viewport.offsetTop + viewport.height, window.innerHeight)
+        : window.innerHeight;
       var toolbarRect = toolbar.getBoundingClientRect();
       var safeTop = Math.max(viewTop + 12, toolbarRect.bottom + 16);
       var safeBottom = viewBottom - 32;
@@ -402,7 +409,7 @@
     }
 
     function updateFullscreenButton() {
-      var active = document.body.classList.contains("is-zen");
+      var active = isZenActive();
       var label = active ? "Keluar layar penuh" : "Layar penuh";
       var iconUse = fullscreenButton.querySelector("use");
 
@@ -432,11 +439,12 @@
     }
 
     function setZen(enabled) {
-      document.body.classList.toggle("is-zen", enabled);
+      var useFlow = enabled && isFirefoxMobile;
 
-      if (enabled) {
-        syncZenViewport();
-      } else {
+      document.body.classList.toggle("is-zen", enabled && !useFlow);
+      document.body.classList.toggle("is-zen-flow", useFlow);
+
+      if (!enabled || useFlow) {
         room.style.top = "";
         room.style.left = "";
         room.style.width = "";
@@ -445,8 +453,19 @@
         room.style.bottom = "";
       }
 
+      if (enabled && !useFlow) syncZenViewport();
       updateFullscreenButton();
+
       window.setTimeout(function () {
+        if (useFlow) {
+          var top = room.getBoundingClientRect().top + window.scrollY;
+          var root = document.documentElement;
+          var previous = root.style.scrollBehavior;
+          root.style.scrollBehavior = "auto";
+          window.scrollTo(0, top);
+          root.style.scrollBehavior = previous;
+        }
+
         syncZenViewport();
         grow();
         scheduleRender();
@@ -455,7 +474,7 @@
     }
 
     function toggleFullscreen() {
-      setZen(!document.body.classList.contains("is-zen"));
+      setZen(!isZenActive());
     }
 
     area.addEventListener("input", function () {
@@ -512,7 +531,7 @@
     newButton.addEventListener("click", startNew);
 
     document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape" && document.body.classList.contains("is-zen")) {
+      if (event.key === "Escape" && isZenActive()) {
         setZen(false);
       }
     });

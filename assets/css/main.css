@@ -1687,20 +1687,28 @@ body.is-zen .site-header,
 body.is-zen .site-footer,
 body.is-zen .crumbs,
 body.is-zen .tool-header,
-body.is-zen .tool-aside {
+body.is-zen .tool-aside,
+body.is-zen-flow .site-header,
+body.is-zen-flow .site-footer,
+body.is-zen-flow .crumbs,
+body.is-zen-flow .tool-header,
+body.is-zen-flow .tool-aside {
   display: none;
 }
 
-body.is-zen .tool-shell {
+body.is-zen .tool-shell,
+body.is-zen-flow .tool-shell {
   width: 100%;
   padding: 0;
 }
 
-body.is-zen .tool-body {
+body.is-zen .tool-body,
+body.is-zen-flow .tool-body {
   padding: 0;
 }
 
-body.is-zen .tool-main {
+body.is-zen .tool-main,
+body.is-zen-flow .tool-main {
   padding: 0;
   border: 0;
 }
@@ -1716,12 +1724,41 @@ body.is-zen #writing-room {
   background: var(--paper);
 }
 
+/* Firefox mobile resizes the layout viewport for the keyboard. Keep the
+   writing room in normal flow so its native focused-element scrolling works. */
+
+body.is-zen-flow #writing-room {
+  position: static;
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+  padding: 0;
+  overflow: visible;
+  background: var(--paper);
+}
+
+body.is-zen-flow #writing-room .writing-room-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: clamp(18px, 4vw, 44px);
+}
+
+body.is-zen-flow .writing-stage {
+  flex: 1;
+}
+
+body.is-zen-flow .writing-area {
+  min-height: 60vh;
+}
+
 /* ------------------------------------------------------------
    Responsive
    ------------------------------------------------------------ */
 
 @media (max-width: 760px) {
-  body.is-zen #writing-room .writing-room-inner {
+  body.is-zen #writing-room .writing-room-inner,
+  body.is-zen-flow #writing-room .writing-room-inner {
     padding-bottom: 40vh;
   }
 
