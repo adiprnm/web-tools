@@ -1660,31 +1660,21 @@ textarea.input--mono {
   color: var(--muted);
 }
 
-/* Fullscreen and the no-Fullscreen-API fallback */
+/* Focused screen: a viewport-aware overlay, not the native Fullscreen API */
 
-.writing-room:fullscreen {
-  width: 100%;
-  max-width: none;
-  padding: clamp(18px, 4vw, 44px);
-  overflow: auto;
-  background: var(--paper);
-}
-
-.writing-room:fullscreen .writing-room-inner,
 body.is-zen #writing-room .writing-room-inner {
   display: flex;
   flex-direction: column;
   max-width: 760px;
   min-height: calc(100vh - clamp(36px, 8vw, 88px));
   margin-inline: auto;
+  padding: clamp(18px, 4vw, 44px);
 }
 
-.writing-room:fullscreen .writing-stage,
 body.is-zen .writing-stage {
   flex: 1;
 }
 
-.writing-room:fullscreen .writing-area,
 body.is-zen .writing-area {
   min-height: 60vh;
 }
@@ -1721,7 +1711,7 @@ body.is-zen #writing-room {
   z-index: 500;
   width: 100%;
   max-width: none;
-  padding: clamp(18px, 4vw, 44px);
+  padding: 0;
   overflow: auto;
   background: var(--paper);
 }
@@ -1731,8 +1721,7 @@ body.is-zen #writing-room {
    ------------------------------------------------------------ */
 
 @media (max-width: 760px) {
-  .writing-room:fullscreen,
-  body.is-zen #writing-room {
+  body.is-zen #writing-room .writing-room-inner {
     padding-bottom: 40vh;
   }
 

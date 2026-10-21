@@ -234,10 +234,7 @@
     }
 
     function scrollContainer() {
-      if (document.fullscreenElement === room || document.body.classList.contains("is-zen")) {
-        return room;
-      }
-      return null;
+      return document.body.classList.contains("is-zen") ? room : null;
     }
 
     function instantScrollBy(delta) {
@@ -404,12 +401,8 @@
       scheduleRender();
     }
 
-    function isFullscreen() {
-      return document.fullscreenElement === room || document.body.classList.contains("is-zen");
-    }
-
     function updateFullscreenButton() {
-      var active = isFullscreen();
+      var active = document.body.classList.contains("is-zen");
       var label = active ? "Keluar layar penuh" : "Layar penuh";
       var iconUse = fullscreenButton.querySelector("use");
 
@@ -418,10 +411,43 @@
       if (iconUse) iconUse.setAttribute("href", active ? "#i-fullscreen-exit" : "#i-fullscreen");
     }
 
-    function fallbackZen(enabled) {
+    function syncZenViewport() {
+      if (!document.body.classList.contains("is-zen")) return;
+
+      var viewport = window.visualViewport;
+      if (viewport) {
+        room.style.top = viewport.offsetTop + "px";
+        room.style.left = viewport.offsetLeft + "px";
+        room.style.width = viewport.width + "px";
+        room.style.height = viewport.height + "px";
+      } else {
+        room.style.top = "0px";
+        room.style.left = "0px";
+        room.style.width = "100%";
+        room.style.height = window.innerHeight + "px";
+      }
+
+      room.style.right = "auto";
+      room.style.bottom = "auto";
+    }
+
+    function setZen(enabled) {
       document.body.classList.toggle("is-zen", enabled);
+
+      if (enabled) {
+        syncZenViewport();
+      } else {
+        room.style.top = "";
+        room.style.left = "";
+        room.style.width = "";
+        room.style.height = "";
+        room.style.right = "";
+        room.style.bottom = "";
+      }
+
       updateFullscreenButton();
       window.setTimeout(function () {
+        syncZenViewport();
         grow();
         scheduleRender();
         kickCaret();
@@ -429,30 +455,7 @@
     }
 
     function toggleFullscreen() {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-        return;
-      }
-
-      if (document.body.classList.contains("is-zen")) {
-        fallbackZen(false);
-        return;
-      }
-
-      if (room.requestFullscreen) {
-        room.requestFullscreen().then(function () {
-          updateFullscreenButton();
-          window.setTimeout(function () {
-            grow();
-            scheduleRender();
-            kickCaret();
-          }, 50);
-        }).catch(function () {
-          fallbackZen(true);
-        });
-      } else {
-        fallbackZen(true);
-      }
+      setZen(!document.body.classList.contains("is-zen"));
     }
 
     area.addEventListener("input", function () {
@@ -484,7 +487,12 @@
 
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", function () {
+        syncZenViewport();
         kickCaret();
+        scheduleEnsureVisible();
+      });
+      window.visualViewport.addEventListener("scroll", function () {
+        syncZenViewport();
         scheduleEnsureVisible();
       });
     }
@@ -503,22 +511,14 @@
     downloadButton.addEventListener("click", download);
     newButton.addEventListener("click", startNew);
 
-    document.addEventListener("fullscreenchange", function () {
-      updateFullscreenButton();
-      window.setTimeout(function () {
-        grow();
-        scheduleRender();
-        kickCaret();
-      }, 50);
-    });
-
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && document.body.classList.contains("is-zen")) {
-        fallbackZen(false);
+        setZen(false);
       }
     });
 
     window.addEventListener("resize", function () {
+      syncZenViewport();
       grow();
       scheduleRender();
       kickCaret();
