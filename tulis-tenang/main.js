@@ -265,7 +265,13 @@
     }
 
     function updateFullscreenButton() {
-      fullscreenButton.textContent = isFullscreen() ? "Keluar layar penuh" : "Layar penuh";
+      var active = isFullscreen();
+      var label = active ? "Keluar layar penuh" : "Layar penuh";
+      var iconUse = fullscreenButton.querySelector("use");
+
+      fullscreenButton.setAttribute("aria-label", label);
+      fullscreenButton.setAttribute("title", label);
+      if (iconUse) iconUse.setAttribute("href", active ? "#i-fullscreen-exit" : "#i-fullscreen");
     }
 
     function fallbackZen(enabled) {

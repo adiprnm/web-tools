@@ -12,11 +12,19 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
         <button type="button" class="seg" data-focus="sentence" aria-pressed="false">Kalimat</button>
         <button type="button" class="seg" data-focus="paragraph" aria-pressed="false">Paragraf</button>
       </div>
-      <div class="writing-actions">
-        <button type="button" class="btn btn--quiet btn--small" id="writing-fullscreen">Layar penuh</button>
-        <button type="button" class="btn btn--quiet btn--small" id="writing-copy">Salin</button>
-        <button type="button" class="btn btn--quiet btn--small" id="writing-download">Unduh .txt</button>
-        <button type="button" class="btn btn--quiet btn--small" id="writing-new">Baru</button>
+      <div class="writing-actions" role="group" aria-label="Aksi tulisan">
+        <button type="button" class="icon-btn" id="writing-fullscreen" aria-label="Layar penuh" title="Layar penuh">
+          <svg class="icon" aria-hidden="true"><use href="#i-fullscreen"></use></svg>
+        </button>
+        <button type="button" class="icon-btn" id="writing-copy" aria-label="Salin tulisan" title="Salin tulisan">
+          <svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg>
+        </button>
+        <button type="button" class="icon-btn" id="writing-download" aria-label="Unduh sebagai .txt" title="Unduh .txt">
+          <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
+        </button>
+        <button type="button" class="icon-btn" id="writing-new" aria-label="Dokumen baru" title="Dokumen baru">
+          <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+        </button>
       </div>
     </div>
 

@@ -1507,7 +1507,10 @@ textarea.input--mono {
 }
 
 .seg {
-  padding: 5px 10px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
   font-size: 0.74rem;
   font-weight: 500;
   line-height: 1.4;
@@ -1535,6 +1538,7 @@ textarea.input--mono {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  margin-left: auto;
 }
 
 .writing-stage {
@@ -1779,11 +1783,6 @@ body.is-zen #writing-room {
 
   .actions--end {
     justify-content: flex-start;
-  }
-
-  .writing-toolbar {
-    flex-direction: column;
-    align-items: flex-start;
   }
 
   .writing-area,
