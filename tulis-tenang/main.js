@@ -27,6 +27,7 @@
     var minutesEl = document.getElementById("writing-minutes");
     var savedEl = document.getElementById("writing-saved");
     var fullscreenButton = document.getElementById("writing-fullscreen");
+    var copyButton = document.getElementById("writing-copy");
     var downloadButton = document.getElementById("writing-download");
     var newButton = document.getElementById("writing-new");
     var focusButtons = Array.prototype.slice.call(document.querySelectorAll("[data-focus]"));
@@ -204,6 +205,20 @@
       setSaved(draft && draft.body ? "Draf dipulihkan" : "Siap");
     }
 
+    function copy() {
+      var text = area.value;
+      if (!text.trim()) {
+        toast("Belum ada tulisan untuk disalin.");
+        return;
+      }
+
+      if (window.Perkakas) {
+        window.Perkakas.copy(text);
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+      }
+    }
+
     function download() {
       var text = area.value;
       if (!text.trim()) {
@@ -303,6 +318,7 @@
     });
 
     fullscreenButton.addEventListener("click", toggleFullscreen);
+    copyButton.addEventListener("click", copy);
     downloadButton.addEventListener("click", download);
     newButton.addEventListener("click", startNew);
 
