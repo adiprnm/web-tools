@@ -1,0 +1,35 @@
+{
+  "id": "/zen-write/",
+  "name": "Zen Write",
+  "short_name": "Zen Write",
+  "description": "Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau paragraf.",
+  "lang": "id",
+  "dir": "ltr",
+  "start_url": "/zen-write/",
+  "scope": "/zen-write/",
+  "display": "standalone",
+  "background_color": "#f4f5f1",
+  "theme_color": "#f4f5f1",
+  "orientation": "any",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/zen-write/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/zen-write/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/zen-write/icon-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ]
+}

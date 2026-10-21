@@ -1,6 +1,14 @@
 (function () {
   "use strict";
 
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("/zen-write/service-worker.js").catch(function () {
+        // PWA offline mode tidak tersedia; alat tetap bisa dipakai.
+      });
+    });
+  }
+
   var STORAGE_KEY = "zen-write:v1";
   var LEGACY_STORAGE_KEY = "tulis-tenang:v1";
   var SAVE_DELAY = 500;
@@ -443,6 +451,7 @@
 
       document.body.classList.toggle("is-zen", enabled && !useFlow);
       document.body.classList.toggle("is-zen-flow", useFlow);
+      if (!enabled) document.body.classList.remove("zen-boot");
 
       if (!enabled || useFlow) {
         room.style.top = "";
@@ -558,6 +567,6 @@
     }
 
     restore();
-    updateFullscreenButton();
+    setZen(true);
   });
 })();

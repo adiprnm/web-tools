@@ -1692,23 +1692,31 @@ body.is-zen-flow .site-header,
 body.is-zen-flow .site-footer,
 body.is-zen-flow .crumbs,
 body.is-zen-flow .tool-header,
-body.is-zen-flow .tool-aside {
+body.is-zen-flow .tool-aside,
+body.zen-boot .site-header,
+body.zen-boot .site-footer,
+body.zen-boot .crumbs,
+body.zen-boot .tool-header,
+body.zen-boot .tool-aside {
   display: none;
 }
 
 body.is-zen .tool-shell,
-body.is-zen-flow .tool-shell {
+body.is-zen-flow .tool-shell,
+body.zen-boot .tool-shell {
   width: 100%;
   padding: 0;
 }
 
 body.is-zen .tool-body,
-body.is-zen-flow .tool-body {
+body.is-zen-flow .tool-body,
+body.zen-boot .tool-body {
   padding: 0;
 }
 
 body.is-zen .tool-main,
-body.is-zen-flow .tool-main {
+body.is-zen-flow .tool-main,
+body.zen-boot .tool-main {
   padding: 0;
   border: 0;
 }
