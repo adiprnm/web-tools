@@ -15,8 +15,8 @@
   note: Simpan daftar tamu lebih dulu, lalu kirim satu per satu. Progres tersimpan di browser.
   privacy: Daftar tamu dan template pesan disimpan di localStorage perangkatmu. Tidak ada data yang dikirim ke server kami.
 
-- slug: tulis-tenang
-  title: Tulis Tenang
+- slug: zen-write
+  title: Zen Write
   description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau paragraf.
   group: Teks
   icon: pencil

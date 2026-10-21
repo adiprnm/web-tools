@@ -1492,11 +1492,17 @@ textarea.input--mono {
 }
 
 .writing-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  padding-block: 10px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
 }
 
 .segmented {

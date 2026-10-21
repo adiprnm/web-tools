@@ -1,7 +1,8 @@
 (function () {
   "use strict";
 
-  var STORAGE_KEY = "tulis-tenang:v1";
+  var STORAGE_KEY = "zen-write:v1";
+  var LEGACY_STORAGE_KEY = "tulis-tenang:v1";
   var SAVE_DELAY = 500;
   var WORDS_PER_MINUTE = 200;
   var FOCUS_MODES = ["off", "sentence", "paragraph"];
@@ -46,7 +47,16 @@
 
     function readDraft() {
       try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          var legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+          if (legacy) {
+            localStorage.setItem(STORAGE_KEY, legacy);
+            localStorage.removeItem(LEGACY_STORAGE_KEY);
+            raw = legacy;
+          }
+        }
+        return JSON.parse(raw || "null");
       } catch (error) {
         return null;
       }
