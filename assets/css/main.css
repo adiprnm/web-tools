@@ -1502,7 +1502,11 @@ textarea.input--mono {
   gap: 10px;
   padding-block: 10px;
   background: var(--paper);
-  border-bottom: 1px solid var(--line);
+}
+
+.page-writing .tool-main {
+  padding-top: 0;
+  border-top: 0;
 }
 
 .segmented {
