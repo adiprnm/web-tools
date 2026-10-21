@@ -1,0 +1,70 @@
+---
+layout: default
+---
+{% assign tool = site.data.tools | where: "slug", page.tool | first %}
+{% assign tool_title = page.title | default: tool.title %}
+{% assign tool_description = page.description | default: tool.description %}
+{% assign tool_note = page.note | default: tool.note %}
+{% assign tool_privacy = page.privacy | default: tool.privacy %}
+
+<div class="shell tool-shell">
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="{{ '/' | relative_url }}">
+      <svg class="icon icon--sm" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+      Semua perkakas
+    </a>
+  </nav>
+
+  <header class="tool-header">
+    <p class="tool-group">
+      {% include tool-icon.html name=tool.icon %}
+      <span class="slash" aria-hidden="true">/</span>
+      <span>{{ tool.group }}</span>
+    </p>
+    <h1>{{ tool_title }}</h1>
+    <p class="tool-lede">{{ tool_description }}</p>
+  </header>
+
+  <div class="tool-body">
+    <div class="tool-main">
+      {{ content }}
+    </div>
+
+    {% unless page.focus %}
+    <aside class="tool-aside" aria-label="Catatan {{ tool_title }}">
+      {% if tool_note %}
+      <div class="aside-block">
+        <h2>Catatan</h2>
+        <p>{{ tool_note }}</p>
+      </div>
+      {% endif %}
+
+      {% if tool_privacy %}
+      <div class="aside-block">
+        <h2>Privasi</h2>
+        <p>{{ tool_privacy }}</p>
+      </div>
+      {% endif %}
+
+      {% assign related = site.data.tools | where: "group", tool.group %}
+      {% if related.size > 1 %}
+      <div class="aside-block">
+        <h2>Perkakas lain</h2>
+        <ul class="aside-links">
+          {% for item in related %}
+            {% unless item.slug == tool.slug %}
+            <li>
+              <a href="{{ '/' | append: item.slug | append: '/' | relative_url }}">
+                {% include tool-icon.html name=item.icon %}
+                <span>{{ item.title }}</span>
+              </a>
+            </li>
+            {% endunless %}
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </aside>
+    {% endunless %}
+  </div>
+</div>

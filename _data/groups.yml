@@ -1,0 +1,9 @@
+# Urutan kelompok di halaman depan.
+- name: Tautan & pesan
+  blurb: Buat tautan dan susun pesan untuk dikirim.
+- name: Teks
+  blurb: Olah isi pesan tanpa mengubah maksudnya.
+- name: Waktu & tanggal
+  blurb: Hitung durasi dan rencanakan hari libur.
+- name: Data
+  blurb: Rapikan tautan dan catatan yang ingin disimpan.

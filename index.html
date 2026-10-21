@@ -1,0 +1,48 @@
+---
+layout: default
+title: Perkakas
+description: Kumpulan perkakas kecil untuk tautan, teks, waktu, dan data. Berjalan di browser, tanpa akun.
+---
+<div class="shell">
+  <section class="hero" aria-labelledby="hero-title">
+    <h1 id="hero-title">Perkakas kecil untuk kerja yang beres.</h1>
+    <p class="hero-sub">Buat tautan WhatsApp, samarkan teks, hitung waktu, dan rapikan URL. Semuanya berjalan di browser. Tanpa akun, tanpa unggah berkas.</p>
+    <a class="hero-jump" href="#daftar">
+      <span>Lihat {{ site.data.tools | size }} alat</span>
+      <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+    </a>
+  </section>
+
+  <div class="catalog" id="daftar">
+    {% for group in site.data.groups %}
+      {% assign group_tools = site.data.tools | where: "group", group.name %}
+      {% if group_tools.size > 0 %}
+      <section class="catalog-group" aria-labelledby="group-{{ forloop.index }}">
+        <header class="group-head">
+          <h2 id="group-{{ forloop.index }}"><span class="slash" aria-hidden="true">/</span> {{ group.name }}</h2>
+          <p class="group-count">{{ group_tools.size }} alat</p>
+        </header>
+        <ul class="tool-list">
+          {% for tool in group_tools %}
+          <li>
+            <a class="tool-row" href="{{ '/' | append: tool.slug | append: '/' | relative_url }}">
+              <span class="tool-row-icon" aria-hidden="true">
+                {% include tool-icon.html name=tool.icon %}
+              </span>
+              <span class="tool-row-copy">
+                <span class="tool-row-title">{{ tool.title }}</span>
+                <span class="tool-row-desc">{{ tool.description }}</span>
+              </span>
+              <span class="tool-row-action" aria-hidden="true">
+                Buka
+                <svg class="icon icon--sm"><use href="#i-arrow-right"></use></svg>
+              </span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>

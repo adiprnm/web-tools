@@ -1,0 +1,121 @@
+---
+layout: tool
+tool: chat-wa-link-generator
+title: Chat WA Link Generator
+description: Buat tautan chat WhatsApp lengkap dengan pesan pembuka. Cukup masukkan nomor dan isi pesan.
+---
+<form id="wa-form" novalidate>
+  <div class="field">
+    <div class="field-top">
+      <label class="field-label" for="wa-phone">Nomor WhatsApp</label>
+      <span class="field-hint">contoh: 0812 3456 7890</span>
+    </div>
+    <input id="wa-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="0812 3456 7890">
+    <p class="field-error" id="wa-phone-error" role="alert"></p>
+    <p class="field-hint field-hint--below">Awalan 0 otomatis diubah menjadi 62. Tanda + dan spasi diabaikan.</p>
+  </div>
+
+  <div class="field">
+    <div class="field-top">
+      <label class="field-label" for="wa-text">Pesan pembuka</label>
+      <span class="field-hint">opsional</span>
+    </div>
+    <textarea id="wa-text" name="text" placeholder="Halo, saya mau tanya soal..."></textarea>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn--primary" type="submit">
+      <svg class="icon" aria-hidden="true"><use href="#i-chat"></use></svg>
+      Buat tautan
+    </button>
+    <button class="btn btn--quiet" type="reset">Bersihkan</button>
+  </div>
+</form>
+
+<section class="readout" id="wa-result" aria-live="polite" hidden>
+  <div class="readout-head">
+    <span class="readout-label">Tautan WhatsApp</span>
+    <button class="btn btn--small" type="button" data-copy="#wa-link">
+      <svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg>
+      <span class="btn-label">Salin</span>
+    </button>
+  </div>
+  <div class="readout-body">
+    <code class="code-value" id="wa-link"></code>
+    <div class="actions actions--tight">
+      <a class="btn btn--small" id="wa-open" href="#" target="_blank" rel="noopener noreferrer">
+        Buka di WhatsApp
+        <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var form = document.getElementById("wa-form");
+    var phoneInput = document.getElementById("wa-phone");
+    var textInput = document.getElementById("wa-text");
+    var error = document.getElementById("wa-phone-error");
+    var result = document.getElementById("wa-result");
+    var link = document.getElementById("wa-link");
+    var openLink = document.getElementById("wa-open");
+
+    function normalizePhone(value) {
+      var digits = value.replace(/\D/g, "");
+      if (digits.indexOf("0") === 0) {
+        digits = "62" + digits.slice(1);
+      } else if (digits.indexOf("8") === 0) {
+        digits = "62" + digits;
+      }
+      return digits;
+    }
+
+    function showError(message) {
+      error.textContent = message;
+      phoneInput.setAttribute("aria-invalid", "true");
+      phoneInput.focus();
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      error.textContent = "";
+      phoneInput.removeAttribute("aria-invalid");
+
+      var phone = normalizePhone(phoneInput.value);
+      if (phone.length < 8) {
+        showError("Masukkan nomor WhatsApp yang valid.");
+        return;
+      }
+
+      var message = textInput.value.trim();
+      var url = "https://wa.me/" + phone;
+      if (message) url += "?text=" + encodeURIComponent(message);
+
+      link.textContent = url;
+      openLink.href = url;
+      result.hidden = false;
+      result.classList.remove("is-new");
+      void result.offsetWidth;
+      result.classList.add("is-new");
+      result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+
+    phoneInput.addEventListener("input", function () {
+      if (error.textContent) {
+        error.textContent = "";
+        phoneInput.removeAttribute("aria-invalid");
+      }
+    });
+
+    form.addEventListener("reset", function () {
+      window.setTimeout(function () {
+        result.hidden = true;
+        link.textContent = "";
+        openLink.removeAttribute("href");
+        error.textContent = "";
+        phoneInput.removeAttribute("aria-invalid");
+      }, 0);
+    });
+  })();
+</script>

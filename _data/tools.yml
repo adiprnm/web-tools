@@ -1,0 +1,64 @@
+# Urutan di sini menentukan urutan kelompok di halaman depan.
+- slug: chat-wa-link-generator
+  title: Chat WA Link Generator
+  description: Buat tautan chat WhatsApp lengkap dengan pesan pembuka. Cukup masukkan nomor dan isi pesan.
+  group: Tautan & pesan
+  icon: chat
+  note: Nomor dinormalisasi ke format internasional. Awalan 0 diubah menjadi 62.
+  privacy: Tautan dibuat di browser kamu. Tidak ada data yang dikirim ke server kami; WhatsApp baru dibuka saat kamu mengklik tautannya.
+
+- slug: share-undangan
+  title: Share Undangan
+  description: Susun pesan undangan digital dan kirim ke banyak tamu, satu per satu lewat WhatsApp.
+  group: Tautan & pesan
+  icon: invite
+  note: Simpan daftar tamu lebih dulu, lalu kirim satu per satu. Progres tersimpan di browser.
+  privacy: Daftar tamu dan template pesan disimpan di localStorage perangkatmu. Tidak ada data yang dikirim ke server kami.
+
+- slug: text-obfuscator
+  title: Text Obfuscator
+  description: Samarkan teks mulai dari paragraf tertentu. Berguna untuk cuplikan atau pratinjau.
+  group: Teks
+  icon: text
+  note: Paragraf sebelum titik mulai dibiarkan utuh. Huruf setelahnya diganti acak; angka dan tanda baca tetap.
+  privacy: Teks diproses di browser dan tidak dikirim ke mana pun.
+
+- slug: random-password-generator
+  title: Random Password Generator
+  description: Buat kata sandi acak dengan panjang dan jenis karakter yang kamu pilih.
+  group: Teks
+  icon: key
+  note: Gunakan pengelola kata sandi untuk menyimpan hasilnya. Panjang 16 karakter atau lebih disarankan.
+  privacy: Kata sandi dibuat dengan crypto.getRandomValues di perangkatmu. Tidak ada yang dikirim atau disimpan.
+
+- slug: time-calculator
+  title: Time Calculator
+  description: Jumlahkan jam, menit, dan detik dari beberapa baris sekaligus.
+  group: Waktu & tanggal
+  icon: clock
+  note: Menit dan detik dijumlahkan sebagai total detik, lalu ditampilkan kembali dalam jam, menit, dan detik.
+  privacy: Semua perhitungan berjalan di browser. Tidak ada data yang dikirim.
+
+- slug: tanggal-merah
+  title: Tanggal Merah Terdekat
+  description: Temukan hari libur nasional berikutnya dan hitung berapa hari lagi.
+  group: Waktu & tanggal
+  icon: calendar
+  note: Akhir pekan tidak dihitung sebagai tanggal merah. Data hari libur nasional berasal dari api-harilibur.
+  privacy: Halaman ini hanya membaca berkas data dari situs ini. Tidak ada data pribadi yang dikirim.
+
+- slug: item-saver
+  title: Item Saver
+  description: Simpan tautan, nomor rekening, atau catatan pendek di browser. Bisa diekspor dan diimpor.
+  group: Data
+  icon: bookmark
+  note: Data disimpan di localStorage peramban. Ekspor JSON untuk membuat cadangan.
+  privacy: Tidak ada data yang dikirim ke server. Menghapus data situs akan menghapus item yang tersimpan.
+
+- slug: url-parser
+  title: URL Parser
+  description: Uraikan host, path, dan query string menjadi struktur yang mudah dibaca.
+  group: Data
+  icon: link
+  note: Jika alamat tidak menyertakan protokol, https:// ditambahkan otomatis.
+  privacy: URL diproses di browser. Tidak ada permintaan jaringan yang dibuat.

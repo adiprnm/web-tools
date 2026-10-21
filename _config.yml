@@ -1,0 +1,34 @@
+title: Perkakas
+tagline: Alat kecil yang berjalan di browser.
+description: Kumpulan perkakas kecil untuk tautan, teks, waktu, dan data. Tanpa akun, tanpa unggah berkas.
+url: "https://tools.adipurnm.com"
+baseurl: ""
+lang: id
+author: Adi Purnama
+email: "adi@adipurnm.com"
+main_site: "https://adipurnm.com"
+donate_url: "https://shop.adipurnm.com/supports"
+github_url: "https://github.com/adiprnm"
+
+analytics_url: "https://stats.adipurnm.com/script.js"
+analytics_enabled: true
+website_id: "ecc10bf1-db29-428a-8403-c63c348f88cc"
+
+permalink: pretty
+
+plugins:
+  - jekyll-seo-tag
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+sass:
+  style: compressed

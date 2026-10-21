@@ -1,0 +1,30 @@
+{
+  "name": "Item Saver",
+  "short_name": "Item Saver",
+  "description": "Simpan tautan, nomor rekening, atau catatan pendek di browser.",
+  "start_url": "/item-saver/",
+  "scope": "/item-saver/",
+  "display": "standalone",
+  "background_color": "#e8ebe4",
+  "theme_color": "#14201c",
+  "icons": [
+    {
+      "src": "/item-saver/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/item-saver/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/item-saver/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}

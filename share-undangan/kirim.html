@@ -1,0 +1,38 @@
+---
+layout: tool
+tool: share-undangan
+title: Kirim Undangan
+description: Kirim pesan undangan ke satu tamu, lalu lanjut ke tamu berikutnya.
+focus: true
+body_class: page-invite-send
+---
+<div id="invite-empty" hidden>
+  <div class="empty-state">
+    <p>Belum ada daftar tamu yang tersimpan di browser ini.</p>
+    <a class="btn btn--primary" href="{{ '/share-undangan/' | relative_url }}">Siapkan undangan</a>
+  </div>
+</div>
+
+<div id="invite-panel">
+  <p class="step" id="invite-step"></p>
+  <h2 class="guest-name" id="invite-guest"></h2>
+  <div class="invite-message" id="invite-message"></div>
+
+  <div class="send-actions">
+    <button class="btn btn--primary" type="button" id="invite-send">
+      <svg class="icon" aria-hidden="true"><use href="#i-chat"></use></svg>
+      Kirim via WhatsApp
+    </button>
+    <button class="btn btn--quiet" type="button" id="invite-next">
+      Tamu berikutnya
+      <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+    </button>
+  </div>
+
+  <p class="source-note">
+    Setelah WhatsApp terbuka, kembali ke halaman ini dan tekan “Tamu berikutnya”.
+    <a href="{{ '/share-undangan/' | relative_url }}">Ubah daftar tamu</a>.
+  </p>
+</div>
+
+<script src="{{ '/share-undangan/main.js' | relative_url }}" defer></script>

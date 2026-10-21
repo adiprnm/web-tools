@@ -1,0 +1,253 @@
+---
+layout: tool
+tool: tanggal-merah
+title: Tanggal Merah Terdekat
+description: Temukan hari libur nasional berikutnya dan hitung berapa hari lagi.
+---
+<div class="holiday">
+  <p class="holiday-kicker">Tanggal merah terdekat</p>
+
+  <div id="holiday-main" aria-live="polite">
+    <div class="holiday-count" id="holiday-count" hidden>
+      <strong id="holiday-days">0</strong>
+      <span>hari lagi</span>
+    </div>
+    <h2 class="holiday-name" id="holiday-name">Menghitung…</h2>
+    <p class="holiday-date" id="holiday-date"></p>
+    <p class="holiday-type" id="holiday-type" hidden></p>
+    <p class="holiday-note" id="holiday-note"></p>
+  </div>
+
+  <div class="holiday-actions">
+    <a class="btn btn--primary" id="holiday-calendar" href="https://calendar.google.com" target="_blank" rel="noopener noreferrer">
+      <svg class="icon" aria-hidden="true"><use href="#i-calendar"></use></svg>
+      Ajukan cuti di Google Calendar
+    </a>
+    <button class="btn btn--quiet" id="holiday-toggle" type="button" aria-expanded="false" aria-controls="holiday-list" hidden>
+      Lihat semua hari libur
+    </button>
+  </div>
+</div>
+
+<div class="holiday-list" id="holiday-list" hidden></div>
+
+<p class="source-note">
+  Data hari libur nasional diambil dari
+  <a href="https://github.com/kresnasatya/api-harilibur/tree/main/data" target="_blank" rel="noopener noreferrer">api-harilibur</a>.
+  Akhir pekan tidak dihitung sebagai tanggal merah.
+</p>
+
+<script>
+  (function () {
+    var DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+    var MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+    var countEl = document.getElementById("holiday-count");
+    var daysEl = document.getElementById("holiday-days");
+    var nameEl = document.getElementById("holiday-name");
+    var dateEl = document.getElementById("holiday-date");
+    var typeEl = document.getElementById("holiday-type");
+    var noteEl = document.getElementById("holiday-note");
+    var calendarEl = document.getElementById("holiday-calendar");
+    var toggleEl = document.getElementById("holiday-toggle");
+    var listEl = document.getElementById("holiday-list");
+
+    function parseDate(value) {
+      var match = String(value).match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (match) {
+        return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      }
+      return new Date(value);
+    }
+
+    function startOfDay(date) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    function addDays(date, amount) {
+      var copy = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      copy.setDate(copy.getDate() + amount);
+      return copy;
+    }
+
+    function dateKey(date) {
+      return date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
+    }
+
+    function formatDate(date) {
+      return DAYS[date.getDay()] + ", " + date.getDate() + " " + MONTHS[date.getMonth()] + " " + date.getFullYear();
+    }
+
+    function dayDiff(date, today) {
+      return Math.round((startOfDay(date) - startOfDay(today)) / 86400000);
+    }
+
+    function holidayType(date, nationalDates) {
+      var day = date.getDay();
+
+      // Sabtu dan Minggu sudah difilter, jadi Senin dan Jumat berarti long weekend.
+      if (day === 1 || day === 5) return "long weekend";
+
+      if (day === 4 && !nationalDates.has(dateKey(addDays(date, 1)))) {
+        return "tanggal kejepit";
+      }
+
+      if (day === 3 && !nationalDates.has(dateKey(addDays(date, 1))) && !nationalDates.has(dateKey(addDays(date, 2)))) {
+        return "tanggal kejepit";
+      }
+
+      return "libur biasa";
+    }
+
+    function typeNote(type) {
+      if (type === "long weekend") return "Long weekend. Waktu yang pas untuk pergi.";
+      if (type === "tanggal kejepit") return "Tanggalnya kejepit. Ajukan cuti di hari sebelahnya.";
+      return "Libur biasa. Kalau perlu cuti, ambil saja.";
+    }
+
+    function calendarUrl(date) {
+      return "https://calendar.google.com/calendar/u/0/r/day/" + date.getFullYear() + "/" + (date.getMonth() + 1) + "/" + date.getDate();
+    }
+
+    function loadYear(year) {
+      return fetch("/tanggal-merah/data/" + year + ".json").then(function (response) {
+        if (!response.ok) throw new Error("Data " + year + " tidak tersedia");
+        return response.json();
+      });
+    }
+
+    function renderList(items, today, nextKey) {
+      listEl.textContent = "";
+
+      items.forEach(function (item) {
+        var diff = dayDiff(item.date, today);
+        var row = document.createElement("div");
+        row.className = "holiday-row" + (diff < 0 ? " holiday-row--past" : "");
+
+        var copy = document.createElement("div");
+        var heading = document.createElement("h3");
+        if (dateKey(item.date) === nextKey) {
+          var dot = document.createElement("span");
+          dot.className = "dot";
+          heading.appendChild(dot);
+        }
+        heading.appendChild(document.createTextNode(item.name));
+        copy.appendChild(heading);
+
+        var meta = document.createElement("div");
+        meta.className = "holiday-row-meta";
+        var daysLabel = diff > 0 ? diff + " hari lagi" : diff === 0 ? "Hari ini" : "Sudah lewat";
+        var strong = document.createElement("strong");
+        strong.textContent = daysLabel;
+        var type = document.createElement("span");
+        type.textContent = item.type;
+        meta.appendChild(strong);
+        meta.appendChild(type);
+
+        var date = document.createElement("p");
+        date.textContent = formatDate(item.date);
+        copy.appendChild(date);
+
+        row.appendChild(copy);
+        row.appendChild(meta);
+        listEl.appendChild(row);
+      });
+    }
+
+    function showError(message) {
+      countEl.hidden = true;
+      nameEl.textContent = "Data belum bisa dimuat";
+      dateEl.textContent = "";
+      typeEl.hidden = true;
+      noteEl.textContent = message;
+      calendarEl.hidden = true;
+      toggleEl.hidden = true;
+    }
+
+    function init() {
+      var today = startOfDay(new Date());
+      var currentYear = today.getFullYear();
+
+      Promise.all([
+        loadYear(currentYear).catch(function () { return []; }),
+        loadYear(currentYear + 1).catch(function () { return []; })
+      ]).then(function (results) {
+        var all = [];
+
+        results.forEach(function (rows) {
+          rows.forEach(function (row) {
+            all.push({
+              name: row.holiday_name,
+              date: parseDate(row.holiday_date),
+              national: Boolean(row.is_national_holiday)
+            });
+          });
+        });
+
+        all = all.filter(function (item) {
+          return item.national && item.date.getDay() !== 0 && item.date.getDay() !== 6 && !isNaN(item.date);
+        });
+
+        var seen = new Set();
+        all = all.filter(function (item) {
+          var key = dateKey(item.date) + "|" + item.name.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        if (!all.length) {
+          showError("Data hari libur tidak tersedia. Coba muat ulang halaman.");
+          return;
+        }
+
+        var nationalDates = new Set(all.map(function (item) { return dateKey(item.date); }));
+
+        all.forEach(function (item) {
+          item.type = holidayType(item.date, nationalDates);
+        });
+
+        all.sort(function (a, b) { return a.date - b.date; });
+
+        var upcoming = all.filter(function (item) { return dayDiff(item.date, today) >= 0; });
+        var nearest = upcoming[0];
+
+        if (!nearest) {
+          countEl.hidden = true;
+          nameEl.textContent = "Tidak ada tanggal merah lagi";
+          dateEl.textContent = "Sampai akhir tahun depan.";
+          typeEl.hidden = true;
+          noteEl.textContent = "Sabar ya. Data tahun berikutnya belum tersedia.";
+          calendarEl.hidden = true;
+        } else {
+          var diff = dayDiff(nearest.date, today);
+          countEl.hidden = false;
+          daysEl.textContent = diff;
+          nameEl.textContent = nearest.name;
+          dateEl.textContent = formatDate(nearest.date);
+          typeEl.hidden = false;
+          typeEl.textContent = nearest.type;
+          noteEl.textContent = diff === 0 ? "Hari ini. Selamat libur!" : typeNote(nearest.type);
+          calendarEl.hidden = false;
+          calendarEl.href = calendarUrl(nearest.date);
+        }
+
+        var listYear = nearest ? nearest.date.getFullYear() : currentYear;
+        var listItems = all.filter(function (item) { return item.date.getFullYear() === listYear; });
+        renderList(listItems, today, nearest ? dateKey(nearest.date) : "");
+        toggleEl.hidden = false;
+      }).catch(function () {
+        showError("Data hari libur tidak tersedia. Coba muat ulang halaman.");
+      });
+    }
+
+    toggleEl.addEventListener("click", function () {
+      var isHidden = listEl.hidden;
+      listEl.hidden = !isHidden;
+      toggleEl.setAttribute("aria-expanded", String(isHidden));
+      toggleEl.textContent = isHidden ? "Sembunyikan hari libur" : "Lihat semua hari libur";
+    });
+
+    init();
+  })();
+</script>

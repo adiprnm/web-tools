@@ -1,0 +1,148 @@
+---
+layout: tool
+tool: url-parser
+title: URL Parser
+description: Uraikan host, path, dan query string menjadi struktur yang mudah dibaca.
+---
+<div class="field">
+  <div class="field-top">
+    <label class="field-label" for="url-input">Alamat URL</label>
+    <span class="field-hint">protokol opsional</span>
+  </div>
+  <input id="url-input" type="text" inputmode="url" autocomplete="url" placeholder="https://contoh.com/halaman?utm_source=newsletter">
+  <p class="field-error" id="url-error" role="alert"></p>
+</div>
+
+<div class="actions">
+  <button class="btn btn--primary" type="button" id="url-parse">
+    <svg class="icon" aria-hidden="true"><use href="#i-link"></use></svg>
+    Parse URL
+  </button>
+  <button class="btn btn--quiet" type="button" id="url-clear">Bersihkan</button>
+</div>
+
+<section class="readout" id="url-result" aria-live="polite" hidden>
+  <div class="readout-head">
+    <span class="readout-label">Hasil parse</span>
+    <button class="btn btn--small" type="button" data-copy="#url-output">
+      <svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg>
+      <span class="btn-label">Salin</span>
+    </button>
+  </div>
+  <div class="readout-body">
+    <pre id="url-output"></pre>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var input = document.getElementById("url-input");
+    var parseButton = document.getElementById("url-parse");
+    var clearButton = document.getElementById("url-clear");
+    var error = document.getElementById("url-error");
+    var result = document.getElementById("url-result");
+    var output = document.getElementById("url-output");
+
+    function setNested(target, key, value) {
+      var arrayMatch = key.match(/^([^\[]+)\[\]$/);
+      if (arrayMatch) {
+        var arrayKey = arrayMatch[1];
+        if (!Array.isArray(target[arrayKey])) target[arrayKey] = [];
+        target[arrayKey].push(value);
+        return;
+      }
+
+      var objectMatch = key.match(/^([^\[]+)\[([^\]]+)\]$/);
+      if (objectMatch) {
+        var objectKey = objectMatch[1];
+        var childKey = objectMatch[2];
+        if (typeof target[objectKey] !== "object" || target[objectKey] === null || Array.isArray(target[objectKey])) {
+          target[objectKey] = {};
+        }
+        target[objectKey][childKey] = value;
+        return;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(target, key)) {
+        if (Array.isArray(target[key])) {
+          target[key].push(value);
+        } else {
+          target[key] = [target[key], value];
+        }
+      } else {
+        target[key] = value;
+      }
+    }
+
+    function parseQuery(search) {
+      var query = {};
+      new URLSearchParams(search).forEach(function (value, key) {
+        setNested(query, key, value);
+      });
+      return query;
+    }
+
+    function parse() {
+      error.textContent = "";
+      var raw = input.value.trim();
+
+      if (!raw) {
+        error.textContent = "Masukkan URL yang ingin diurai.";
+        input.focus();
+        result.hidden = true;
+        return;
+      }
+
+      if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(raw)) {
+        raw = "https://" + raw;
+      }
+
+      var url;
+      try {
+        url = new URL(raw);
+      } catch (exception) {
+        error.textContent = "URL tidak valid. Periksa kembali alamatnya.";
+        input.focus();
+        result.hidden = true;
+        return;
+      }
+
+      var lines = [
+        "Host      : " + url.host,
+        "Path      : " + (url.pathname || "/"),
+        "Query     : " + JSON.stringify(parseQuery(url.search), null, 2)
+      ];
+
+      if (url.hash) {
+        lines.push("Fragment  : " + decodeURIComponent(url.hash.slice(1)));
+      }
+
+      output.textContent = lines.join("\n");
+      result.hidden = false;
+      result.classList.remove("is-new");
+      void result.offsetWidth;
+      result.classList.add("is-new");
+    }
+
+    parseButton.addEventListener("click", parse);
+
+    input.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        parse();
+      }
+    });
+
+    input.addEventListener("input", function () {
+      error.textContent = "";
+    });
+
+    clearButton.addEventListener("click", function () {
+      input.value = "";
+      output.textContent = "";
+      error.textContent = "";
+      result.hidden = true;
+      input.focus();
+    });
+  })();
+</script>

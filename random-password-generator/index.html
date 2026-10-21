@@ -1,0 +1,188 @@
+---
+layout: tool
+tool: random-password-generator
+title: Random Password Generator
+description: Buat kata sandi acak dengan panjang dan jenis karakter yang kamu pilih.
+---
+<div class="field">
+  <div class="field-top">
+    <label class="field-label" for="pw-length">Panjang kata sandi</label>
+    <span class="field-hint">4–64 karakter</span>
+  </div>
+  <input id="pw-length" type="number" min="4" max="64" value="32" inputmode="numeric">
+</div>
+
+<div class="field">
+  <div class="field-top">
+    <span class="field-label" id="pw-types-label">Jenis karakter</span>
+    <span class="field-hint">pilih minimal satu</span>
+  </div>
+  <div class="check-grid" role="group" aria-labelledby="pw-types-label">
+    <label class="check">
+      <input type="checkbox" id="pw-upper" checked>
+      <span>Huruf besar <code>A–Z</code></span>
+    </label>
+    <label class="check">
+      <input type="checkbox" id="pw-lower" checked>
+      <span>Huruf kecil <code>a–z</code></span>
+    </label>
+    <label class="check">
+      <input type="checkbox" id="pw-numbers" checked>
+      <span>Angka <code>0–9</code></span>
+    </label>
+    <label class="check">
+      <input type="checkbox" id="pw-symbols" checked>
+      <span>Simbol <code>!@#$</code></span>
+    </label>
+  </div>
+  <p class="field-error" id="pw-error" role="alert"></p>
+</div>
+
+<div class="actions">
+  <button class="btn btn--primary" type="button" id="pw-generate">
+    <svg class="icon" aria-hidden="true"><use href="#i-key"></use></svg>
+    Buat kata sandi
+  </button>
+</div>
+
+<section class="readout" aria-live="polite">
+  <div class="readout-head">
+    <span class="readout-label">Kata sandi baru</span>
+    <button class="btn btn--small" type="button" data-copy="#pw-value">
+      <svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg>
+      <span class="btn-label">Salin</span>
+    </button>
+  </div>
+  <div class="readout-body">
+    <code class="code-value code-value--password" id="pw-value"></code>
+    <div class="meter">
+      <div class="meter-track" aria-hidden="true">
+        <span class="meter-seg"></span>
+        <span class="meter-seg"></span>
+        <span class="meter-seg"></span>
+        <span class="meter-seg"></span>
+      </div>
+      <p class="meter-text" id="pw-meter-text"></p>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var SETS = {
+      upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      lower: "abcdefghijklmnopqrstuvwxyz",
+      numbers: "0123456789",
+      symbols: "!@#$%^&*()-_=+[]{};:,.?/"
+    };
+
+    var lengthInput = document.getElementById("pw-length");
+    var checkboxes = {
+      upper: document.getElementById("pw-upper"),
+      lower: document.getElementById("pw-lower"),
+      numbers: document.getElementById("pw-numbers"),
+      symbols: document.getElementById("pw-symbols")
+    };
+    var generateButton = document.getElementById("pw-generate");
+    var valueEl = document.getElementById("pw-value");
+    var meterText = document.getElementById("pw-meter-text");
+    var segments = Array.prototype.slice.call(document.querySelectorAll(".meter-seg"));
+    var error = document.getElementById("pw-error");
+
+    function randomInt(max) {
+      if (!window.crypto || !window.crypto.getRandomValues) {
+        return Math.floor(Math.random() * max);
+      }
+      var limit = Math.floor(4294967296 / max) * max;
+      var buffer = new Uint32Array(1);
+      do {
+        window.crypto.getRandomValues(buffer);
+      } while (buffer[0] >= limit);
+      return buffer[0] % max;
+    }
+
+    function shuffle(items) {
+      for (var i = items.length - 1; i > 0; i--) {
+        var j = randomInt(i + 1);
+        var temp = items[i];
+        items[i] = items[j];
+        items[j] = temp;
+      }
+      return items;
+    }
+
+    function selectedGroups() {
+      var groups = [];
+      Object.keys(SETS).forEach(function (key) {
+        if (checkboxes[key].checked) groups.push(SETS[key]);
+      });
+      return groups;
+    }
+
+    function generate(length, groups) {
+      var pool = groups.join("");
+      var characters = groups.map(function (group) {
+        return group[randomInt(group.length)];
+      });
+
+      while (characters.length < length) {
+        characters.push(pool[randomInt(pool.length)]);
+      }
+
+      return shuffle(characters).join("");
+    }
+
+    function updateMeter(entropy) {
+      var level = entropy < 50 ? 1 : entropy < 80 ? 2 : entropy < 120 ? 3 : 4;
+      var label = entropy < 50 ? "lemah" : entropy < 80 ? "cukup" : entropy < 120 ? "kuat" : "sangat kuat";
+
+      segments.forEach(function (segment, index) {
+        segment.classList.toggle("is-on", index < level);
+        segment.classList.toggle("is-warn", index < level && level <= 2);
+      });
+
+      meterText.textContent = "Entropi sekitar " + Math.round(entropy) + " bit · " + label + ".";
+    }
+
+    function build() {
+      error.textContent = "";
+      var groups = selectedGroups();
+      if (!groups.length) {
+        error.textContent = "Pilih setidaknya satu jenis karakter.";
+        valueEl.textContent = "";
+        meterText.textContent = "";
+        segments.forEach(function (segment) {
+          segment.classList.remove("is-on", "is-warn");
+        });
+        return;
+      }
+
+      var length = parseInt(lengthInput.value, 10);
+      if (isNaN(length)) length = 32;
+      length = Math.max(4, Math.min(64, length));
+      lengthInput.value = length;
+
+      var password = generate(length, groups);
+      var poolSize = groups.join("").length;
+      valueEl.textContent = password;
+      updateMeter(length * Math.log2(poolSize));
+    }
+
+    generateButton.addEventListener("click", build);
+
+    lengthInput.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        build();
+      }
+    });
+
+    Object.keys(checkboxes).forEach(function (key) {
+      checkboxes[key].addEventListener("change", function () {
+        if (error.textContent) error.textContent = "";
+      });
+    });
+
+    build();
+  })();
+</script>

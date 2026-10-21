@@ -1,0 +1,62 @@
+---
+layout: tool
+tool: item-saver
+title: Item Saver
+description: Simpan tautan, nomor rekening, atau catatan pendek di browser. Bisa diekspor dan diimpor.
+manifest: /item-saver/manifest.json
+---
+<div class="item-toolbar">
+  <div class="search-wrap">
+    <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+    <input id="item-search" type="search" placeholder="Cari berdasarkan nama..." aria-label="Cari item berdasarkan nama">
+  </div>
+  <button class="btn btn--primary" type="button" id="item-add">
+    <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+    Tambah item
+  </button>
+</div>
+
+<div class="actions actions--tight">
+  <button class="btn btn--quiet btn--small" type="button" id="item-export">
+    <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
+    Ekspor JSON
+  </button>
+  <button class="btn btn--quiet btn--small" type="button" id="item-import-button">
+    <svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg>
+    Impor JSON
+  </button>
+  <input id="item-import" type="file" accept="application/json,.json" hidden>
+</div>
+
+<div class="item-list" id="item-list"></div>
+<p class="item-count" id="item-count"></p>
+
+<dialog class="item-dialog" id="item-dialog" aria-labelledby="item-dialog-title">
+  <div class="dialog-head">
+    <h2 id="item-dialog-title">Tambah item</h2>
+    <button class="icon-btn" type="button" id="item-close" aria-label="Tutup dialog">
+      <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+    </button>
+  </div>
+  <div class="dialog-body">
+    <form id="item-form" novalidate>
+      <input id="item-id" type="hidden">
+      <div class="field">
+        <label class="field-label" for="item-name">Nama</label>
+        <input id="item-name" type="text" placeholder="Contoh: Rekening BCA">
+        <p class="field-error" id="item-name-error" role="alert"></p>
+      </div>
+      <div class="field">
+        <label class="field-label" for="item-content">Isi</label>
+        <textarea id="item-content" class="input--mono" rows="5" placeholder="Nomor rekening, tautan, atau catatan..."></textarea>
+        <p class="field-error" id="item-content-error" role="alert"></p>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn btn--quiet" type="button" id="item-cancel">Batal</button>
+        <button class="btn btn--primary" type="submit">Simpan</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<script src="{{ '/item-saver/main.js' | relative_url }}" defer></script>

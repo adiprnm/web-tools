@@ -1,0 +1,15 @@
+---
+layout: null
+---
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>{{ site.url }}/</loc></url>
+  {% for tool in site.data.tools %}
+  <url><loc>{{ site.url }}/{{ tool.slug }}/</loc></url>
+  {% endfor %}
+  {% assign share_tool = site.data.tools | where: "slug", "share-undangan" %}
+  {% if share_tool.size > 0 %}
+  <url><loc>{{ site.url }}/share-undangan/kirim/</loc></url>
+  <url><loc>{{ site.url }}/share-undangan/done/</loc></url>
+  {% endif %}
+</urlset>

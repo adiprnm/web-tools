@@ -1,0 +1,74 @@
+---
+layout: tool
+tool: share-undangan
+title: Share Undangan
+description: Susun pesan undangan digital dan kirim ke banyak tamu, satu per satu lewat WhatsApp.
+---
+<form id="invite-form" novalidate>
+  <div class="field">
+    <div class="field-top">
+      <label class="field-label" for="invite-link">Link undangan</label>
+      <span class="field-hint">alamat halaman undangan</span>
+    </div>
+    <input id="invite-link" type="url" inputmode="url" placeholder="https://kanyaah.com/fulanah-fulan">
+    <p class="field-error" id="invite-link-error" role="alert"></p>
+  </div>
+
+  <div class="field">
+    <div class="field-top">
+      <label class="field-label" for="guest-key">Parameter nama tamu</label>
+      <span class="field-hint">biasanya to</span>
+    </div>
+    <input id="guest-key" type="text" value="to" placeholder="to">
+    <p class="field-hint field-hint--below">Contoh: <code>https://kanyaah.com/fulanah-fulan?<strong>to</strong>=Nama+Tamu</code></p>
+    <p class="field-error" id="invite-key-error" role="alert"></p>
+  </div>
+
+  <div class="field">
+    <div class="field-top">
+      <label class="field-label" for="invite-guests">Daftar nama tamu</label>
+      <span class="field-hint">satu nama per baris</span>
+    </div>
+    <textarea id="invite-guests" rows="8" placeholder="Budi Santoso&#10;Sari &amp; keluarga&#10;Rina"></textarea>
+    <p class="field-error" id="invite-guests-error" role="alert"></p>
+  </div>
+
+  <div class="field">
+    <div class="field-top">
+      <label class="field-label" for="invite-template">Template pesan</label>
+      <span class="field-hint">pakai &lt;nama_tamu&gt; dan &lt;link_undangan&gt;</span>
+    </div>
+    <textarea id="invite-template" class="input--mono" rows="16">Assalamu'alaikum Wr. Wb.
+Bismillahirahmanirrahim.
+
+Maha suci Allah yang telah menjadikan segala sesuatu lebih indah dan sempurna.
+
+Kepada Yth. <nama_tamu>
+
+Tanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i, teman sekaligus sahabat, untuk menghadiri acara pernikahan kami, Fulanah &amp; Fulan.
+
+Informasi mengenai detail acara, lokasi, dan waktu lebih lengkap dapat diakses pada tautan berikut:
+
+<link_undangan>
+
+Merupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu.
+
+Mohon maaf perihal undangan hanya dibagikan melalui pesan ini. Terima kasih banyak atas perhatiannya.
+
+Wassalamu'alaikum Wr. Wb.
+
+Kami yang berbahagia,
+Fulan &amp; Fulanah.</textarea>
+    <p class="field-error" id="invite-template-error" role="alert"></p>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn--primary" type="submit">
+      <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+      Lanjut kirim
+    </button>
+    <button class="btn btn--quiet" type="button" id="invite-save">Simpan</button>
+  </div>
+</form>
+
+<script src="{{ '/share-undangan/main.js' | relative_url }}" defer></script>
