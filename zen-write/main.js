@@ -39,6 +39,7 @@
     var renderFrame = null;
     var ensureFrame = null;
     var caretGuardUntil = 0;
+    var caretKickTimers = [];
 
     function toast(message) {
       if (window.Perkakas) window.Perkakas.toast(message);
@@ -304,6 +305,14 @@
       caretGuardUntil = Date.now() + 1600;
     }
 
+    function kickCaret() {
+      armCaretGuard();
+      caretKickTimers.forEach(function (timer) { window.clearTimeout(timer); });
+      caretKickTimers = [80, 300, 700, 1200].map(function (delay) {
+        return window.setTimeout(scheduleEnsureVisible, delay);
+      });
+    }
+
     function handleCaretScroll() {
       if (Date.now() < caretGuardUntil && document.activeElement === area) {
         scheduleEnsureVisible();
@@ -316,7 +325,7 @@
         button.setAttribute("aria-pressed", String(button.getAttribute("data-focus") === state.focus));
       });
       area.focus({ preventScroll: true });
-      armCaretGuard();
+      kickCaret();
       scheduleRender();
       queueSave();
     }
@@ -387,10 +396,12 @@
       area.value = "";
       updateStats();
       grow();
-      renderFocus();
+      renderMirror();
       saveNow();
       setSaved("Draf baru");
       area.focus();
+      kickCaret();
+      scheduleRender();
     }
 
     function isFullscreen() {
@@ -410,7 +421,11 @@
     function fallbackZen(enabled) {
       document.body.classList.toggle("is-zen", enabled);
       updateFullscreenButton();
-      window.setTimeout(grow, 50);
+      window.setTimeout(function () {
+        grow();
+        scheduleRender();
+        kickCaret();
+      }, 50);
     }
 
     function toggleFullscreen() {
@@ -427,7 +442,11 @@
       if (room.requestFullscreen) {
         room.requestFullscreen().then(function () {
           updateFullscreenButton();
-          window.setTimeout(grow, 50);
+          window.setTimeout(function () {
+            grow();
+            scheduleRender();
+            kickCaret();
+          }, 50);
         }).catch(function () {
           fallbackZen(true);
         });
@@ -439,36 +458,33 @@
     area.addEventListener("input", function () {
       updateStats();
       grow();
-      armCaretGuard();
+      kickCaret();
       scheduleRender();
       queueSave();
     });
 
     area.addEventListener("click", function () {
-      armCaretGuard();
+      kickCaret();
       scheduleRender();
     });
 
     area.addEventListener("keyup", function () {
-      armCaretGuard();
+      kickCaret();
       scheduleRender();
     });
 
-    area.addEventListener("focus", function () {
-      armCaretGuard();
-      window.setTimeout(scheduleEnsureVisible, 260);
-    });
+    area.addEventListener("focus", kickCaret);
 
     document.addEventListener("selectionchange", function () {
       if (document.activeElement === area) {
-        armCaretGuard();
+        kickCaret();
         scheduleRender();
       }
     });
 
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", function () {
-        armCaretGuard();
+        kickCaret();
         scheduleEnsureVisible();
       });
     }
@@ -489,7 +505,11 @@
 
     document.addEventListener("fullscreenchange", function () {
       updateFullscreenButton();
-      window.setTimeout(grow, 50);
+      window.setTimeout(function () {
+        grow();
+        scheduleRender();
+        kickCaret();
+      }, 50);
     });
 
     document.addEventListener("keydown", function (event) {
@@ -501,6 +521,7 @@
     window.addEventListener("resize", function () {
       grow();
       scheduleRender();
+      kickCaret();
     });
 
     window.addEventListener("beforeunload", function () {

@@ -1731,6 +1731,11 @@ body.is-zen #writing-room {
    ------------------------------------------------------------ */
 
 @media (max-width: 760px) {
+  .writing-room:fullscreen,
+  body.is-zen #writing-room {
+    padding-bottom: 40vh;
+  }
+
   .tool-aside {
     grid-template-columns: minmax(0, 1fr);
     gap: 18px;
