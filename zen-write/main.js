@@ -21,6 +21,7 @@
     if (!area) return;
 
     var room = document.getElementById("writing-room");
+    var toolbar = room.querySelector(".writing-toolbar");
     var stage = document.getElementById("writing-stage");
     var mirror = document.getElementById("writing-mirror");
     var wordsEl = document.getElementById("writing-words");
@@ -36,6 +37,8 @@
     var state = { focus: "off" };
     var saveTimer = null;
     var renderFrame = null;
+    var ensureFrame = null;
+    var caretGuardUntil = 0;
 
     function toast(message) {
       if (window.Perkakas) window.Perkakas.toast(message);
@@ -106,12 +109,41 @@
       area.style.height = area.scrollHeight + "px";
     }
 
-    function appendPart(text, className) {
+    function appendText(text, className) {
       if (!text) return;
-      var span = document.createElement("span");
-      span.className = className;
-      span.textContent = text;
-      mirror.appendChild(span);
+      if (className) {
+        var span = document.createElement("span");
+        span.className = className;
+        span.textContent = text;
+        mirror.appendChild(span);
+      } else {
+        mirror.appendChild(document.createTextNode(text));
+      }
+    }
+
+    function makeProbe() {
+      var probe = document.createElement("span");
+      probe.className = "writing-caret-probe";
+      probe.setAttribute("aria-hidden", "true");
+      return probe;
+    }
+
+    function appendSegment(text, start, end, className, position) {
+      var before = text.slice(start, position);
+      var after = text.slice(position, end);
+
+      if (className) {
+        var span = document.createElement("span");
+        span.className = className;
+        if (before) span.appendChild(document.createTextNode(before));
+        span.appendChild(makeProbe());
+        if (after) span.appendChild(document.createTextNode(after));
+        mirror.appendChild(span);
+      } else {
+        if (before) mirror.appendChild(document.createTextNode(before));
+        mirror.appendChild(makeProbe());
+        if (after) mirror.appendChild(document.createTextNode(after));
+      }
     }
 
     function lineRange(text, position) {
@@ -158,34 +190,124 @@
       return [start, end];
     }
 
-    function renderFocus() {
+    function renderMirror() {
       var text = area.value;
+      var position = Math.max(0, Math.min(area.selectionStart, text.length));
       var isFocus = state.focus !== "off" && text.length > 0;
 
       stage.classList.toggle("is-focus", isFocus);
       stage.classList.toggle("is-empty", text.length === 0);
 
-      if (!isFocus) {
-        mirror.textContent = "";
-        return;
+      var ranges;
+      if (isFocus) {
+        var range = state.focus === "sentence"
+          ? sentenceRange(text, position)
+          : paragraphRange(text, position);
+        ranges = [
+          [0, range[0], "writing-dim"],
+          [range[0], range[1], "writing-active"],
+          [range[1], text.length, "writing-dim"]
+        ];
+      } else {
+        ranges = [[0, text.length, ""]];
       }
 
-      var range = state.focus === "sentence"
-        ? sentenceRange(text, area.selectionStart)
-        : paragraphRange(text, area.selectionStart);
-
       mirror.textContent = "";
-      appendPart(text.slice(0, range[0]), "writing-dim");
-      appendPart(text.slice(range[0], range[1]), "writing-active");
-      appendPart(text.slice(range[1]), "writing-dim");
+      var probeInserted = false;
+
+      ranges.forEach(function (part) {
+        var start = part[0];
+        var end = part[1];
+        var className = part[2];
+
+        if (probeInserted || position < start || position > end) {
+          appendText(text.slice(start, end), className);
+          return;
+        }
+
+        appendSegment(text, start, end, className, position);
+        probeInserted = true;
+      });
+
+      if (!probeInserted) mirror.appendChild(makeProbe());
+    }
+
+    function scrollContainer() {
+      if (document.fullscreenElement === room || document.body.classList.contains("is-zen")) {
+        return room;
+      }
+      return null;
+    }
+
+    function instantScrollBy(delta) {
+      var container = scrollContainer();
+      var root = document.documentElement;
+      var previous = root.style.scrollBehavior;
+      root.style.scrollBehavior = "auto";
+
+      if (container) {
+        var previousContainer = container.style.scrollBehavior;
+        container.style.scrollBehavior = "auto";
+        container.scrollBy(0, delta);
+        container.style.scrollBehavior = previousContainer;
+      } else {
+        window.scrollBy(0, delta);
+      }
+
+      root.style.scrollBehavior = previous;
+    }
+
+    function ensureCaretVisible() {
+      if (document.activeElement !== area) return;
+
+      var probe = mirror.querySelector(".writing-caret-probe");
+      if (!probe) return;
+
+      var rect = probe.getBoundingClientRect();
+      if (!rect || (!rect.width && !rect.height)) return;
+
+      var viewport = window.visualViewport;
+      var viewTop = viewport ? viewport.offsetTop : 0;
+      var viewBottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight;
+      var toolbarRect = toolbar.getBoundingClientRect();
+      var safeTop = Math.max(viewTop + 12, toolbarRect.bottom + 16);
+      var safeBottom = viewBottom - 32;
+      var delta = 0;
+
+      if (rect.top < safeTop) {
+        delta = rect.top - safeTop;
+      } else if (rect.bottom > safeBottom) {
+        delta = rect.bottom - safeBottom;
+      }
+
+      if (delta) instantScrollBy(delta);
     }
 
     function scheduleRender() {
       if (renderFrame) return;
       renderFrame = window.requestAnimationFrame(function () {
         renderFrame = null;
-        renderFocus();
+        renderMirror();
+        ensureCaretVisible();
       });
+    }
+
+    function scheduleEnsureVisible() {
+      if (ensureFrame) return;
+      ensureFrame = window.requestAnimationFrame(function () {
+        ensureFrame = null;
+        ensureCaretVisible();
+      });
+    }
+
+    function armCaretGuard() {
+      caretGuardUntil = Date.now() + 1600;
+    }
+
+    function handleCaretScroll() {
+      if (Date.now() < caretGuardUntil && document.activeElement === area) {
+        scheduleEnsureVisible();
+      }
     }
 
     function applyFocus(mode) {
@@ -193,9 +315,10 @@
       focusButtons.forEach(function (button) {
         button.setAttribute("aria-pressed", String(button.getAttribute("data-focus") === state.focus));
       });
-      renderFocus();
+      area.focus({ preventScroll: true });
+      armCaretGuard();
+      scheduleRender();
       queueSave();
-      area.focus();
     }
 
     function restore() {
@@ -211,7 +334,7 @@
 
       updateStats();
       grow();
-      renderFocus();
+      renderMirror();
       setSaved(draft && draft.body ? "Draf dipulihkan" : "Siap");
     }
 
@@ -316,16 +439,42 @@
     area.addEventListener("input", function () {
       updateStats();
       grow();
+      armCaretGuard();
       scheduleRender();
       queueSave();
     });
 
-    area.addEventListener("click", scheduleRender);
-    area.addEventListener("keyup", scheduleRender);
+    area.addEventListener("click", function () {
+      armCaretGuard();
+      scheduleRender();
+    });
+
+    area.addEventListener("keyup", function () {
+      armCaretGuard();
+      scheduleRender();
+    });
+
+    area.addEventListener("focus", function () {
+      armCaretGuard();
+      window.setTimeout(scheduleEnsureVisible, 260);
+    });
 
     document.addEventListener("selectionchange", function () {
-      if (document.activeElement === area) scheduleRender();
+      if (document.activeElement === area) {
+        armCaretGuard();
+        scheduleRender();
+      }
     });
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", function () {
+        armCaretGuard();
+        scheduleEnsureVisible();
+      });
+    }
+
+    window.addEventListener("scroll", handleCaretScroll, { passive: true });
+    room.addEventListener("scroll", handleCaretScroll, { passive: true });
 
     focusButtons.forEach(function (button) {
       button.addEventListener("click", function () {

@@ -1604,9 +1604,18 @@ textarea.input--mono {
   position: absolute;
   inset: 0;
   z-index: 1;
-  display: none;
+  display: block;
+  visibility: hidden;
   color: var(--ink);
   pointer-events: none;
+}
+
+.writing-caret-probe {
+  display: inline-block;
+  width: 0;
+  height: 1.2em;
+  overflow: hidden;
+  vertical-align: baseline;
 }
 
 .writing-stage.is-focus:not(.is-empty) .writing-area {
@@ -1621,7 +1630,7 @@ textarea.input--mono {
 }
 
 .writing-stage.is-focus:not(.is-empty) .writing-mirror {
-  display: block;
+  visibility: visible;
 }
 
 .writing-dim {
