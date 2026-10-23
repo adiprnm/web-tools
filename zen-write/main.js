@@ -15,6 +15,7 @@
   var WORDS_PER_MINUTE = 200;
   var TOOLBAR_HIDE_DELAY = 2800;
   var TOOLBAR_HINT_DELAY = 2000;
+  var SCROLL_SETTLE_DELAY = 140;
   var FOCUS_MODES = ["off", "sentence", "paragraph"];
   var FONT_MODES = [
     "sans", "inter", "sourcesans",
@@ -73,6 +74,8 @@
     var ensureFrame = null;
     var caretGuardUntil = 0;
     var caretKickTimers = [];
+    var scrollSettleTimer = null;
+    var viewportBox = { top: 0, left: 0, width: 0, height: 0 };
     var toolbarHideTimer = null;
     var zenHintTimer = null;
 
@@ -905,9 +908,29 @@
     }
 
     function handleCaretScroll() {
-      if (Date.now() < caretGuardUntil && document.activeElement === area) {
-        scheduleEnsureVisible();
-      }
+      if (Date.now() >= caretGuardUntil || document.activeElement !== area) return;
+
+      // Scrolling fires per frame. Reading the caret probe needs a layout, which
+      // is expensive now that the mirror draws the whole document, so wait for
+      // the gesture to settle before nudging the caret back into view.
+      window.clearTimeout(scrollSettleTimer);
+      scrollSettleTimer = window.setTimeout(function () {
+        scrollSettleTimer = null;
+        if (Date.now() < caretGuardUntil && document.activeElement === area) {
+          scheduleEnsureVisible();
+        }
+      }, SCROLL_SETTLE_DELAY);
+    }
+
+    // A real scroll gesture wins: otherwise the caret guard would pull the page
+    // back under the reader's finger. Keyboard changes still come through the
+    // visualViewport resize handler.
+    function releaseCaretGuard() {
+      caretGuardUntil = 0;
+      caretKickTimers.forEach(function (timer) { window.clearTimeout(timer); });
+      caretKickTimers = [];
+      window.clearTimeout(scrollSettleTimer);
+      scrollSettleTimer = null;
     }
 
     function syncFontChoices() {
@@ -1081,18 +1104,24 @@
       if (!document.body.classList.contains("is-zen")) return;
 
       var viewport = window.visualViewport;
-      if (viewport) {
-        room.style.top = viewport.offsetTop + "px";
-        room.style.left = viewport.offsetLeft + "px";
-        room.style.width = viewport.width + "px";
-        room.style.height = viewport.height + "px";
-      } else {
-        room.style.top = "0px";
-        room.style.left = "0px";
-        room.style.width = "100%";
-        room.style.height = window.innerHeight + "px";
+      var box = viewport
+        ? { top: viewport.offsetTop, left: viewport.offsetLeft, width: viewport.width, height: viewport.height }
+        : { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight };
+
+      // visualViewport can scroll every frame; rewriting the same box would
+      // invalidate layout each time, so only touch the styles when they move.
+      if (box.top === viewportBox.top
+        && box.left === viewportBox.left
+        && box.width === viewportBox.width
+        && box.height === viewportBox.height) {
+        return;
       }
 
+      viewportBox = box;
+      room.style.top = box.top + "px";
+      room.style.left = box.left + "px";
+      room.style.width = box.width + "px";
+      room.style.height = box.height + "px";
       room.style.right = "auto";
       room.style.bottom = "auto";
     }
@@ -1336,12 +1365,15 @@
       });
       window.visualViewport.addEventListener("scroll", function () {
         syncZenViewport();
-        scheduleEnsureVisible();
+        handleCaretScroll();
       });
     }
 
     window.addEventListener("scroll", handleCaretScroll, { passive: true });
     room.addEventListener("scroll", handleCaretScroll, { passive: true });
+    ["wheel", "touchmove"].forEach(function (name) {
+      window.addEventListener(name, releaseCaretGuard, { passive: true });
+    });
 
     focusButtons.forEach(function (button) {
       button.addEventListener("click", function () {
