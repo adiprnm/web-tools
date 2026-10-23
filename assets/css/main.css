@@ -1504,6 +1504,57 @@ textarea.input--mono {
   background: var(--paper);
 }
 
+/* Trigger for the toolbar in zen mode: a quiet grip at the top edge */
+
+.writing-toolbar-trigger {
+  display: none;
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  left: 50%;
+  z-index: 510;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 44px;
+  margin: 0 0 0 -44px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 0 0 3px 3px;
+  opacity: 0.4;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.writing-toolbar-trigger .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.writing-toolbar-trigger:hover,
+.writing-toolbar-trigger:focus-visible {
+  color: var(--ink);
+  opacity: 1;
+}
+
+.writing-toolbar-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+body.is-zen .writing-toolbar-trigger,
+body.is-zen-flow .writing-toolbar-trigger {
+  display: inline-flex;
+}
+
+body.is-toolbar-revealed .writing-toolbar-trigger {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .page-writing .tool-main {
   padding-top: 0;
   border-top: 0;
@@ -1673,10 +1724,44 @@ body.is-zen #writing-room .writing-room-inner {
 
 body.is-zen .writing-stage {
   flex: 1;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 body.is-zen .writing-area {
   min-height: 60vh;
+}
+
+/* The toolbar slides away; the grip at the top edge brings it back. */
+
+body.is-zen .writing-toolbar,
+body.is-zen-flow .writing-toolbar {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  right: auto;
+  z-index: 505;
+  width: min(760px, 100%);
+  max-width: 100%;
+  margin: 0;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) clamp(18px, 4vw, 44px) 10px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 14px 30px -24px rgba(21, 27, 24, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, -105%);
+  transition: transform 0.26s ease, opacity 0.26s ease, visibility 0.26s;
+}
+
+body.is-zen.is-toolbar-revealed .writing-toolbar,
+body.is-zen-flow.is-toolbar-revealed .writing-toolbar {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
 }
 
 body.is-zen {
@@ -1754,6 +1839,9 @@ body.is-zen-flow #writing-room .writing-room-inner {
 
 body.is-zen-flow .writing-stage {
   flex: 1;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 body.is-zen-flow .writing-area {
@@ -1767,6 +1855,8 @@ body.is-zen-flow .writing-area {
 @media (max-width: 760px) {
   body.is-zen #writing-room .writing-room-inner,
   body.is-zen-flow #writing-room .writing-room-inner {
+    /* Leave room for the hidden toolbar to slide over without covering text. */
+    padding-top: calc(clamp(18px, 4vw, 44px) + 24px);
     padding-bottom: 40vh;
   }
 

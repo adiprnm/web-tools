@@ -13,8 +13,11 @@
   var LEGACY_STORAGE_KEY = "tulis-tenang:v1";
   var SAVE_DELAY = 500;
   var WORDS_PER_MINUTE = 200;
+  var TOOLBAR_HIDE_DELAY = 2800;
+  var TOOLBAR_HINT_DELAY = 2000;
   var FOCUS_MODES = ["off", "sentence", "paragraph"];
   var isFirefoxMobile = /Firefox|FxiOS/i.test(navigator.userAgent) && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  var canHover = !!(window.matchMedia && window.matchMedia("(hover: hover)").matches);
 
   var sentenceSegmenter = null;
   try {
@@ -30,7 +33,8 @@
     if (!area) return;
 
     var room = document.getElementById("writing-room");
-    var toolbar = room.querySelector(".writing-toolbar");
+    var toolbar = document.getElementById("writing-toolbar");
+    var toolbarTrigger = document.getElementById("writing-toolbar-trigger");
     var stage = document.getElementById("writing-stage");
     var mirror = document.getElementById("writing-mirror");
     var wordsEl = document.getElementById("writing-words");
@@ -49,6 +53,8 @@
     var ensureFrame = null;
     var caretGuardUntil = 0;
     var caretKickTimers = [];
+    var toolbarHideTimer = null;
+    var zenHintTimer = null;
 
     function toast(message) {
       if (window.Perkakas) window.Perkakas.toast(message);
@@ -244,6 +250,55 @@
 
     function isZenActive() {
       return document.body.classList.contains("is-zen") || document.body.classList.contains("is-zen-flow");
+    }
+
+    function isToolbarRevealed() {
+      return document.body.classList.contains("is-toolbar-revealed");
+    }
+
+    function armToolbarHide(delay) {
+      window.clearTimeout(toolbarHideTimer);
+      toolbarHideTimer = window.setTimeout(function () {
+        toolbarHideTimer = null;
+        if (canHover && toolbar.matches(":hover")) {
+          armToolbarHide(1200);
+          return;
+        }
+        if (toolbar.contains(document.activeElement) && document.activeElement !== area) {
+          area.focus({ preventScroll: true });
+        }
+        setToolbarRevealed(false);
+      }, typeof delay === "number" ? delay : TOOLBAR_HIDE_DELAY);
+    }
+
+    function setToolbarRevealed(revealed, hideDelay) {
+      var next = Boolean(revealed) && isZenActive();
+
+      document.body.classList.toggle("is-toolbar-revealed", next);
+      if (toolbarTrigger) {
+        var label = next ? "Sembunyikan alat tulis" : "Tampilkan alat tulis";
+
+        toolbarTrigger.setAttribute("aria-expanded", String(next));
+        toolbarTrigger.setAttribute("aria-label", label);
+        toolbarTrigger.setAttribute("title", label);
+        // Keep the grip out of the tab order while the toolbar is open, but let
+        // it keep focus so keyboard users can close the toolbar with Enter.
+        if (next) {
+          toolbarTrigger.setAttribute("tabindex", "-1");
+        } else {
+          toolbarTrigger.removeAttribute("tabindex");
+        }
+      }
+
+      window.clearTimeout(toolbarHideTimer);
+      toolbarHideTimer = null;
+      if (next) armToolbarHide(hideDelay);
+    }
+
+    function revealToolbar() {
+      window.clearTimeout(zenHintTimer);
+      zenHintTimer = null;
+      setToolbarRevealed(true);
     }
 
     function scrollContainer() {
@@ -453,6 +508,10 @@
       document.body.classList.toggle("is-zen-flow", useFlow);
       if (!enabled) document.body.classList.remove("zen-boot");
 
+      setToolbarRevealed(false);
+      window.clearTimeout(zenHintTimer);
+      zenHintTimer = null;
+
       if (!enabled || useFlow) {
         room.style.top = "";
         room.style.left = "";
@@ -480,6 +539,18 @@
         scheduleRender();
         kickCaret();
       }, 50);
+
+      if (enabled) {
+        window.clearTimeout(zenHintTimer);
+        zenHintTimer = window.setTimeout(function () {
+          zenHintTimer = null;
+          if (!isZenActive() || isToolbarRevealed() || document.activeElement === area) return;
+          setToolbarRevealed(true, TOOLBAR_HINT_DELAY);
+        }, 400);
+      } else {
+        window.clearTimeout(zenHintTimer);
+        zenHintTimer = null;
+      }
     }
 
     function toggleFullscreen() {
@@ -487,6 +558,9 @@
     }
 
     area.addEventListener("input", function () {
+      window.clearTimeout(zenHintTimer);
+      zenHintTimer = null;
+      if (isToolbarRevealed()) setToolbarRevealed(false);
       updateStats();
       grow();
       kickCaret();
@@ -539,10 +613,34 @@
     downloadButton.addEventListener("click", download);
     newButton.addEventListener("click", startNew);
 
+    if (toolbarTrigger) {
+      toolbarTrigger.addEventListener("click", function () {
+        if (isToolbarRevealed()) {
+          setToolbarRevealed(false);
+        } else {
+          revealToolbar();
+        }
+      });
+    }
+
+    ["pointermove", "focusin", "keydown"].forEach(function (name) {
+      toolbar.addEventListener(name, function () {
+        if (isToolbarRevealed()) armToolbarHide();
+      });
+    });
+
+    stage.addEventListener("pointerdown", function () {
+      if (isToolbarRevealed()) setToolbarRevealed(false);
+    });
+
     document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape" && isZenActive()) {
-        setZen(false);
+      if (event.key !== "Escape") return;
+      if (isToolbarRevealed()) {
+        setToolbarRevealed(false);
+        event.preventDefault();
+        return;
       }
+      if (isZenActive()) setZen(false);
     });
 
     window.addEventListener("resize", function () {

@@ -11,8 +11,11 @@ pwa: true
 description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau paragraf.
 ---
 <div class="writing-room" id="writing-room">
+  <button type="button" class="writing-toolbar-trigger" id="writing-toolbar-trigger" aria-label="Tampilkan alat tulis" aria-expanded="false" aria-controls="writing-toolbar" title="Tampilkan alat tulis">
+    <svg class="icon" aria-hidden="true"><use href="#i-grip"></use></svg>
+  </button>
   <div class="writing-room-inner">
-    <div class="writing-toolbar">
+    <div class="writing-toolbar" id="writing-toolbar">
       <div class="segmented" role="group" aria-label="Mode fokus">
         <button type="button" class="seg" data-focus="off" aria-pressed="true">Mati</button>
         <button type="button" class="seg" data-focus="sentence" aria-pressed="false">Kalimat</button>
