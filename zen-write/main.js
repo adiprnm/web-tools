@@ -223,6 +223,13 @@
     var markdownCache = { text: null, model: null };
     var ESCAPABLE = "\\`*_{}[]()#+-.!~<>";
 
+    // A list line: optional blockquote prefix, up to any indentation, a bullet
+    // (- * +) or an ordered marker (1. 1)), then at least one space or the end
+    // of the line. The same expression drives both the quiet marker styling
+    // and the Enter-to-continue behaviour, so the two never disagree.
+    var LIST_LINE = /^((?:[ \t]*>[ \t]?)*)([ \t]*)([-*+]|\d{1,9}[.)])([ \t]+|$)/;
+    var TASK_BOX = /^\[[ xX]\](?:[ \t]+|$)/;
+
     function repeatChar(char, count) {
       return new Array(count + 1).join(char);
     }
@@ -293,6 +300,63 @@
             overlays.push({ start: position, end: markerEnd, classes: ["md-marker"] });
             if (lineEnd > markerEnd) {
               overlays.push({ start: markerEnd, end: lineEnd, classes: ["md-heading"] });
+            }
+          }
+        }
+
+        if (newline === -1) break;
+        position = newline + 1;
+      }
+
+      return overlays;
+    }
+
+    function matchListLine(line) {
+      var match = LIST_LINE.exec(line);
+
+      if (!match) return null;
+
+      return {
+        quote: match[1],
+        indent: match[2],
+        marker: match[3],
+        markerOffset: match[1].length + match[2].length,
+        contentOffset: match[0].length
+      };
+    }
+
+    function scanLists(text, fences) {
+      var overlays = [];
+      var position = 0;
+      var fenceIndex = 0;
+
+      while (position <= text.length) {
+        var newline = text.indexOf("\n", position);
+        var lineEnd = newline === -1 ? text.length : newline;
+
+        while (fenceIndex < fences.length && fences[fenceIndex].end <= position) fenceIndex += 1;
+
+        var inFence = fenceIndex < fences.length
+          && fences[fenceIndex].start <= position
+          && position < fences[fenceIndex].end;
+
+        if (!inFence) {
+          var line = text.slice(position, lineEnd);
+          var item = matchListLine(line);
+
+          if (item) {
+            var markerStart = position + item.markerOffset;
+            var contentStart = position + item.contentOffset;
+
+            overlays.push({ start: markerStart, end: contentStart, classes: ["md-marker"] });
+
+            var box = TASK_BOX.exec(line.slice(item.contentOffset));
+            if (box) {
+              overlays.push({
+                start: contentStart,
+                end: contentStart + box[0].replace(/[ \t]+$/, "").length,
+                classes: ["md-marker"]
+              });
             }
           }
         }
@@ -540,7 +604,7 @@
       var fences = fenceRanges(text);
       var model = {
         runs: inlineRuns(text, fences),
-        overlays: scanHeadings(text, fences)
+        overlays: scanHeadings(text, fences).concat(scanLists(text, fences))
       };
 
       markdownCache.text = text;
@@ -1083,6 +1147,139 @@
     function toggleFullscreen() {
       setZen(!isZenActive());
     }
+
+    /* List continuation
+       ----------------------------------------------------------
+       Enter inside a list line writes the next marker for us: the same
+       bullet, the next number, a fresh unchecked task box, and the
+       blockquote depth plus indentation of the current line. An empty
+       item ends the list instead. The edit runs through execCommand so
+       the browser keeps its own undo stack (setRangeText would flatten
+       it); only when that is unavailable do we splice by hand and fire
+       a synthetic input event. */
+
+    function parseListLine(text, position) {
+      var range = lineRange(text, position);
+      var line = text.slice(range[0], range[1]);
+      var item = matchListLine(line);
+
+      if (!item) return null;
+
+      return {
+        start: range[0],
+        quote: item.quote,
+        indent: item.indent,
+        marker: item.marker,
+        contentStart: range[0] + item.contentOffset,
+        content: line.slice(item.contentOffset)
+      };
+    }
+
+    function parseQuoteLine(text, position) {
+      var range = lineRange(text, position);
+      var line = text.slice(range[0], range[1]);
+      var match = /^((?:[ \t]*>[ \t]?)+)(.*)$/.exec(line);
+
+      if (!match) return null;
+
+      return {
+        start: range[0],
+        quote: match[1],
+        quoteEnd: range[0] + match[1].length,
+        content: match[2]
+      };
+    }
+
+    function nextListMarker(marker) {
+      var ordered = /^(\d{1,9})([.)])$/.exec(marker);
+
+      if (!ordered) return marker;
+      return (parseInt(ordered[1], 10) + 1) + ordered[2];
+    }
+
+    function listEdit(text, position) {
+      var item = parseListLine(text, position);
+
+      // The caret has to sit after the marker; inside it, Enter stays native.
+      if (!item || position < item.contentStart) return null;
+
+      var box = TASK_BOX.exec(item.content);
+      var rest = box ? item.content.slice(box[0].length) : item.content;
+
+      // An empty item ends the list: the marker (and its task box) goes away
+      // and the caret drops back to the line itself. A blockquote prefix, if
+      // any, stays so the quote keeps going.
+      if (rest.trim() === "") {
+        return {
+          from: item.start + item.quote.length,
+          to: item.contentStart + (box ? box[0].length : 0),
+          insert: ""
+        };
+      }
+
+      // Task items always continue unchecked; a mid-line Enter splits the item
+      // because the text after the caret simply slides to the new line.
+      var marker = box ? item.marker + " [ ]" : nextListMarker(item.marker);
+
+      return {
+        from: position,
+        to: position,
+        insert: "\n" + item.quote + item.indent + marker + " "
+      };
+    }
+
+    function quoteEdit(text, position) {
+      var line = parseQuoteLine(text, position);
+
+      if (!line || position < line.quoteEnd) return null;
+
+      if (line.content.trim() === "") {
+        return { from: line.start, to: line.quoteEnd, insert: "" };
+      }
+
+      return { from: position, to: position, insert: "\n" + line.quote };
+    }
+
+    function replaceRange(from, to, insert) {
+      var applied = false;
+
+      area.setSelectionRange(from, to);
+
+      try {
+        applied = insert
+          ? document.execCommand("insertText", false, insert)
+          : document.execCommand("delete", false, null);
+      } catch (error) {
+        applied = false;
+      }
+
+      if (!applied) {
+        var caret = from + insert.length;
+
+        area.value = area.value.slice(0, from) + insert + area.value.slice(to);
+        area.setSelectionRange(caret, caret);
+        area.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+
+      kickCaret();
+      scheduleRender();
+    }
+
+    area.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter") return;
+      if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
+      // Never fight an IME composition or a replaced selection.
+      if (event.isComposing || event.keyCode === 229) return;
+      if (area.selectionStart !== area.selectionEnd) return;
+
+      var position = area.selectionStart;
+      var edit = listEdit(area.value, position) || quoteEdit(area.value, position);
+
+      if (!edit) return;
+
+      event.preventDefault();
+      replaceRange(edit.from, edit.to, edit.insert);
+    });
 
     area.addEventListener("input", function () {
       window.clearTimeout(zenHintTimer);
