@@ -2087,18 +2087,18 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   vertical-align: baseline;
 }
 
-.writing-stage.is-focus:not(.is-empty) .writing-area {
+.writing-stage:not(.is-empty) .writing-area {
   color: transparent;
   -webkit-text-fill-color: transparent;
 }
 
-.writing-stage.is-focus:not(.is-empty) .writing-area::selection {
+.writing-stage:not(.is-empty) .writing-area::selection {
   color: transparent;
   -webkit-text-fill-color: transparent;
   background: rgba(228, 87, 46, 0.18);
 }
 
-.writing-stage.is-focus:not(.is-empty) .writing-mirror {
+.writing-stage:not(.is-empty) .writing-mirror {
   visibility: visible;
 }
 
@@ -2110,7 +2110,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   color: var(--ink);
 }
 
-/* Markdown styles in focus mode.
+/* Markdown styles, drawn by the mirror in every focus mode.
    All of these are metric-neutral on purpose: the mirror must keep the
    exact same character grid as the textarea underneath, otherwise the
    caret and selection would drift away from the rendered glyphs. */

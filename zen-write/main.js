@@ -704,13 +704,17 @@
       return mergeSegments(segments);
     }
 
-    function renderActiveRange(text, from, to, position) {
+    function renderActiveRange(text, from, to, position, activeClass) {
       var segments = styleSegments(text, from, to);
       var caret = Math.max(from, Math.min(position, to));
       var probeInserted = false;
 
+      if (activeClass === undefined) activeClass = "writing-active";
+
       segments.forEach(function (segment) {
-        var classes = ["writing-active"].concat(segment.classes).join(" ");
+        // With the focus modes off every run is active, so plain text can stay a
+        // bare text node. That keeps the mirror cheap to rebuild on long drafts.
+        var classes = (activeClass ? [activeClass] : []).concat(segment.classes).join(" ");
 
         if (!probeInserted && caret >= segment.start && caret <= segment.end) {
           appendText(text.slice(segment.start, caret), classes);
@@ -748,11 +752,12 @@
       stage.classList.toggle("is-empty", text.length === 0);
 
       mirror.textContent = "";
+      if (!text.length) return;
 
+      // Focus off: markdown still gets rendered, but across the whole document
+      // instead of one active sentence or paragraph.
       if (!isFocus) {
-        appendText(text.slice(0, position));
-        mirror.appendChild(makeProbe());
-        appendText(text.slice(position));
+        renderActiveRange(text, 0, text.length, position, "");
         return;
       }
 
@@ -1293,7 +1298,9 @@
     });
 
     area.addEventListener("click", function (event) {
-      if ((event.metaKey || event.ctrlKey) && state.focus !== "off") {
+      // Links are styled in every focus mode now, so Ctrl/Cmd-click follows them
+      // everywhere too.
+      if (event.metaKey || event.ctrlKey) {
         var href = hrefAt(area.selectionStart);
 
         if (href) {
