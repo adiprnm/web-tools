@@ -1,4 +1,4 @@
-var CACHE_NAME = "zen-write-v3";
+var CACHE_NAME = "zen-write-v5";
 var APP_SHELL = [
   "/zen-write/",
   "/zen-write/main.js",
@@ -12,6 +12,7 @@ var APP_SHELL = [
   "/assets/js/site.js",
   "/assets/fonts/archivo-latin.woff2",
   "/assets/fonts/azeret-mono-latin.woff2",
+  "/assets/fonts/lora-latin.woff2",
   "/assets/favicon.svg"
 ];
 

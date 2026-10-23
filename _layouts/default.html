@@ -17,6 +17,9 @@
   {% endif %}
   <link rel="preload" href="{{ '/assets/fonts/archivo-latin.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{{ '/assets/fonts/azeret-mono-latin.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
+  {% if page.body_class contains 'page-writing' %}
+  <link rel="preload" href="{{ '/assets/fonts/lora-latin.woff2' | relative_url }}" as="font" type="font/woff2" crossorigin>
+  {% endif %}
   <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
   {% if jekyll.environment == "production" and site.analytics_enabled %}
     <script defer async src="{{ site.analytics_url }}" data-website="{{ site.url | remove: 'https://' | remove: 'http://' }}" data-page="{{ page.title }}" data-website-id="{{ site.website_id }}"></script>

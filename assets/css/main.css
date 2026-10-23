@@ -1,6 +1,6 @@
 /* ============================================================
    Perkakas — sistem visual minimal
-   Kertas, tinta, satu aksen. Archivo + Azeret Mono.
+   Kertas, tinta, satu aksen. Tiga keluarga huruf, sembilan pilihan.
    ============================================================ */
 
 @font-face {
@@ -19,6 +19,62 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Lora";
+  src: url("/assets/fonts/lora-latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/assets/fonts/inter-latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("/assets/fonts/source-sans-3-latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "EB Garamond";
+  src: url("/assets/fonts/eb-garamond-latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Literata";
+  src: url("/assets/fonts/literata-latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/assets/fonts/ibm-plex-mono-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/assets/fonts/jetbrains-mono-latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --paper: #f4f5f1;
   --surface: #ffffff;
@@ -33,7 +89,14 @@
   --danger: #9e2b12;
 
   --font-sans: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-inter: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-source-sans: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Lora", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-garamond: "EB Garamond", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-literata: "Literata", "Iowan Old Style", Georgia, "Times New Roman", serif;
   --font-mono: "Azeret Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --font-plex: "IBM Plex Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --font-jetbrains: "JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
 
   --shell: 1000px;
   --tool: 780px;
@@ -1496,10 +1559,9 @@ textarea.input--mono {
   top: 0;
   z-index: 20;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   padding-block: 10px;
   background: var(--paper);
 }
@@ -1595,9 +1657,298 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   background: var(--ink);
 }
 
+.writing-toolbar .segmented {
+  flex: 0 0 auto;
+}
+
+.segmented .seg {
+  flex: 0 0 auto;
+}
+
+.seg--icon {
+  justify-content: center;
+  width: 34px;
+  padding: 0;
+}
+
+.seg--icon .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Font dialog: the toolbar keeps a single icon; the three faces are
+   previewed inside the dialog, each in its own typeface. */
+
+.writing-font-btn {
+  flex: 0 0 auto;
+}
+
+.font-dialog {
+  display: none;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(640px, calc(100vh - 48px));
+  margin: auto;
+  padding: 0;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  box-shadow: 0 26px 60px -32px rgba(21, 27, 24, 0.45);
+}
+
+.font-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.font-dialog::backdrop {
+  background: rgba(21, 27, 24, 0.3);
+}
+
+.font-dialog-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 14px 18px 18px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.font-dialog-inner::-webkit-scrollbar {
+  width: 8px;
+}
+
+.font-dialog-inner::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 4px;
+}
+
+.font-dialog-inner::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.font-dialog-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 0;
+}
+
+.font-dialog-head h2 {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.font-options {
+  display: grid;
+  gap: 16px;
+}
+
+.font-group {
+  display: grid;
+  gap: 8px;
+}
+
+.font-group-label {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.font-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.font-option:hover {
+  background: var(--surface-muted);
+  border-color: var(--line-strong);
+}
+
+.font-option:has(input:checked) {
+  border-color: var(--ink);
+}
+
+.font-option:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.font-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.font-option-sample {
+  flex: 0 0 auto;
+  width: 44px;
+  font-size: 1.7rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.font-option-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.font-option-name {
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.font-option-preview {
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.font-option-check {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin-left: auto;
+  color: var(--accent);
+  opacity: 0;
+}
+
+.font-option:has(input:checked) .font-option-check {
+  opacity: 1;
+}
+
+.font-option[data-font-choice="sans"] {
+  font-family: var(--font-sans);
+}
+
+.font-option[data-font-choice="inter"] {
+  font-family: var(--font-inter);
+}
+
+.font-option[data-font-choice="sourcesans"] {
+  font-family: var(--font-source-sans);
+}
+
+.font-option[data-font-choice="serif"] {
+  font-family: var(--font-serif);
+}
+
+.font-option[data-font-choice="garamond"] {
+  font-family: var(--font-garamond);
+}
+
+.font-option[data-font-choice="literata"] {
+  font-family: var(--font-literata);
+}
+
+.font-option[data-font-choice="mono"] {
+  font-family: var(--font-mono);
+}
+
+.font-option[data-font-choice="plex"] {
+  font-family: var(--font-plex);
+}
+
+.font-option[data-font-choice="jetbrains"] {
+  font-family: var(--font-jetbrains);
+}
+
+.font-group[data-family="serif"] .font-option-sample {
+  font-size: 1.8rem;
+}
+
+.font-group[data-family="serif"] .font-option-preview {
+  font-size: 0.88rem;
+}
+
+.font-group[data-family="mono"] .font-option-sample {
+  font-size: 1.32rem;
+  letter-spacing: -0.04em;
+}
+
+.font-group[data-family="mono"] .font-option-name {
+  font-size: 0.8rem;
+  letter-spacing: -0.03em;
+}
+
+.font-group[data-family="mono"] .font-option-preview {
+  font-size: 0.72rem;
+  letter-spacing: -0.03em;
+}
+
+@media (max-width: 430px) {
+  .writing-toolbar {
+    gap: 6px;
+  }
+
+  .writing-toolbar .seg--icon {
+    width: 32px;
+  }
+
+  .writing-toolbar .icon-btn {
+    width: 32px;
+  }
+
+  .writing-toolbar .writing-actions {
+    gap: 3px;
+  }
+}
+
+@media (max-width: 350px) {
+  .writing-toolbar {
+    gap: 4px;
+  }
+
+  .writing-toolbar .seg--icon {
+    width: 28px;
+  }
+
+  .writing-toolbar .icon-btn {
+    width: 28px;
+  }
+
+  .font-dialog-head {
+    padding: 14px 14px 0;
+  }
+
+  .font-dialog-inner {
+    padding: 12px 14px 14px;
+  }
+}
+
 .writing-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
   gap: 4px;
   margin-left: auto;
 }
@@ -1621,6 +1972,73 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   white-space: pre-wrap;
   overflow-wrap: break-word;
   word-break: normal;
+}
+
+/* Typeface picker: the choice rides on .writing-stage so the textarea
+   and the focus-mode mirror always share the same metrics. */
+
+.writing-stage[data-font="serif"] .writing-area,
+.writing-stage[data-font="serif"] .writing-mirror {
+  font-family: var(--font-serif);
+  font-size: clamp(1.1rem, 1.8vw, 1.22rem);
+  line-height: 1.88;
+  letter-spacing: 0;
+}
+
+.writing-stage[data-font="inter"] .writing-area,
+.writing-stage[data-font="inter"] .writing-mirror {
+  font-family: var(--font-inter);
+  font-size: clamp(1.02rem, 1.62vw, 1.11rem);
+  line-height: 1.82;
+  letter-spacing: -0.011em;
+}
+
+.writing-stage[data-font="sourcesans"] .writing-area,
+.writing-stage[data-font="sourcesans"] .writing-mirror {
+  font-family: var(--font-source-sans);
+  font-size: clamp(1.06rem, 1.7vw, 1.16rem);
+  line-height: 1.82;
+  letter-spacing: 0;
+}
+
+.writing-stage[data-font="garamond"] .writing-area,
+.writing-stage[data-font="garamond"] .writing-mirror {
+  font-family: var(--font-garamond);
+  font-size: clamp(1.18rem, 1.95vw, 1.32rem);
+  line-height: 1.9;
+  letter-spacing: 0.002em;
+}
+
+.writing-stage[data-font="literata"] .writing-area,
+.writing-stage[data-font="literata"] .writing-mirror {
+  font-family: var(--font-literata);
+  font-size: clamp(1.08rem, 1.74vw, 1.17rem);
+  line-height: 1.86;
+  letter-spacing: 0;
+}
+
+.writing-stage[data-font="mono"] .writing-area,
+.writing-stage[data-font="mono"] .writing-mirror {
+  font-family: var(--font-mono);
+  font-size: clamp(0.95rem, 1.55vw, 1.04rem);
+  line-height: 1.9;
+  letter-spacing: -0.01em;
+}
+
+.writing-stage[data-font="plex"] .writing-area,
+.writing-stage[data-font="plex"] .writing-mirror {
+  font-family: var(--font-plex);
+  font-size: clamp(0.95rem, 1.55vw, 1.03rem);
+  line-height: 1.9;
+  letter-spacing: 0;
+}
+
+.writing-stage[data-font="jetbrains"] .writing-area,
+.writing-stage[data-font="jetbrains"] .writing-mirror {
+  font-family: var(--font-jetbrains);
+  font-size: clamp(0.92rem, 1.5vw, 1rem);
+  line-height: 1.9;
+  letter-spacing: -0.012em;
 }
 
 .writing-area {
@@ -1813,6 +2231,13 @@ body.is-zen-flow.is-toolbar-revealed .writing-toolbar {
   visibility: visible;
   pointer-events: auto;
   transform: translate(-50%, 0);
+}
+
+@media (max-width: 350px) {
+  body.is-zen .writing-toolbar,
+  body.is-zen-flow .writing-toolbar {
+    padding-inline: 14px;
+  }
 }
 
 body.is-zen {

@@ -17,10 +17,19 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
   <div class="writing-room-inner">
     <div class="writing-toolbar" id="writing-toolbar">
       <div class="segmented" role="group" aria-label="Mode fokus">
-        <button type="button" class="seg" data-focus="off" aria-pressed="true">Mati</button>
-        <button type="button" class="seg" data-focus="sentence" aria-pressed="false">Kalimat</button>
-        <button type="button" class="seg" data-focus="paragraph" aria-pressed="false">Paragraf</button>
+        <button type="button" class="seg seg--icon" data-focus="off" aria-pressed="true" aria-label="Fokus mati" title="Fokus mati">
+          <svg class="icon" aria-hidden="true"><use href="#i-focus-off"></use></svg>
+        </button>
+        <button type="button" class="seg seg--icon" data-focus="sentence" aria-pressed="false" aria-label="Fokus kalimat" title="Fokus kalimat">
+          <svg class="icon" aria-hidden="true"><use href="#i-focus-sentence"></use></svg>
+        </button>
+        <button type="button" class="seg seg--icon" data-focus="paragraph" aria-pressed="false" aria-label="Fokus paragraf" title="Fokus paragraf">
+          <svg class="icon" aria-hidden="true"><use href="#i-focus-paragraph"></use></svg>
+        </button>
       </div>
+      <button type="button" class="icon-btn writing-font-btn" id="writing-font-button" aria-label="Jenis huruf" title="Jenis huruf" aria-haspopup="dialog" aria-controls="writing-font-dialog">
+        <svg class="icon" aria-hidden="true"><use href="#i-type"></use></svg>
+      </button>
       <div class="writing-actions" role="group" aria-label="Aksi tulisan">
         <button type="button" class="icon-btn" id="writing-fullscreen" aria-label="Layar penuh" title="Layar penuh">
           <svg class="icon" aria-hidden="true"><use href="#i-fullscreen"></use></svg>
@@ -50,5 +59,108 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
     </div>
   </div>
 </div>
+
+<dialog class="font-dialog" id="writing-font-dialog" aria-labelledby="writing-font-dialog-title">
+  <div class="font-dialog-head">
+    <h2 id="writing-font-dialog-title">Jenis huruf</h2>
+    <button type="button" class="icon-btn" id="writing-font-close" aria-label="Tutup" title="Tutup">
+      <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+    </button>
+  </div>
+  <div class="font-dialog-inner">
+    <div class="font-options">
+      <div class="font-group" data-family="sans">
+        <h3 class="font-group-label">Sans serif</h3>
+        <label class="font-option" data-font-choice="sans">
+          <input type="radio" name="writing-font" value="sans" checked>
+          <span class="font-option-sample" aria-hidden="true">Aa</span>
+          <span class="font-option-body">
+            <span class="font-option-name">Archivo</span>
+            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          </span>
+          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+        </label>
+        <label class="font-option" data-font-choice="inter">
+          <input type="radio" name="writing-font" value="inter">
+          <span class="font-option-sample" aria-hidden="true">Aa</span>
+          <span class="font-option-body">
+            <span class="font-option-name">Inter</span>
+            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          </span>
+          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+        </label>
+        <label class="font-option" data-font-choice="sourcesans">
+          <input type="radio" name="writing-font" value="sourcesans">
+          <span class="font-option-sample" aria-hidden="true">Aa</span>
+          <span class="font-option-body">
+            <span class="font-option-name">Source Sans 3</span>
+            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          </span>
+          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+        </label>
+      </div>
+      <div class="font-group" data-family="serif">
+        <h3 class="font-group-label">Serif</h3>
+        <label class="font-option" data-font-choice="serif">
+          <input type="radio" name="writing-font" value="serif">
+          <span class="font-option-sample" aria-hidden="true">Aa</span>
+          <span class="font-option-body">
+            <span class="font-option-name">Lora</span>
+            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          </span>
+          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+        </label>
+        <label class="font-option" data-font-choice="garamond">
+          <input type="radio" name="writing-font" value="garamond">
+          <span class="font-option-sample" aria-hidden="true">Aa</span>
+          <span class="font-option-body">
+            <span class="font-option-name">EB Garamond</span>
+            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          </span>
+          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+        </label>
+        <label class="font-option" data-font-choice="literata">
+          <input type="radio" name="writing-font" value="literata">
+          <span class="font-option-sample" aria-hidden="true">Aa</span>
+          <span class="font-option-body">
+            <span class="font-option-name">Literata</span>
+            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          </span>
+          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+        </label>
+      </div>
+      <div class="font-group" data-family="mono">
+        <h3 class="font-group-label">Monospace</h3>
+        <label class="font-option" data-font-choice="mono">
+          <input type="radio" name="writing-font" value="mono">
+          <span class="font-option-sample" aria-hidden="true">Aa</span>
+          <span class="font-option-body">
+            <span class="font-option-name">Azeret Mono</span>
+            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          </span>
+          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+        </label>
+        <label class="font-option" data-font-choice="plex">
+          <input type="radio" name="writing-font" value="plex">
+          <span class="font-option-sample" aria-hidden="true">Aa</span>
+          <span class="font-option-body">
+            <span class="font-option-name">IBM Plex Mono</span>
+            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          </span>
+          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+        </label>
+        <label class="font-option" data-font-choice="jetbrains">
+          <input type="radio" name="writing-font" value="jetbrains">
+          <span class="font-option-sample" aria-hidden="true">Aa</span>
+          <span class="font-option-body">
+            <span class="font-option-name">JetBrains Mono</span>
+            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          </span>
+          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+        </label>
+      </div>
+    </div>
+  </div>
+</dialog>
 
 <script src="{{ '/zen-write/main.js' | relative_url }}" defer></script>

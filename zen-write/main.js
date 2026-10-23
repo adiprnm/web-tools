@@ -16,6 +16,22 @@
   var TOOLBAR_HIDE_DELAY = 2800;
   var TOOLBAR_HINT_DELAY = 2000;
   var FOCUS_MODES = ["off", "sentence", "paragraph"];
+  var FONT_MODES = [
+    "sans", "inter", "sourcesans",
+    "serif", "garamond", "literata",
+    "mono", "plex", "jetbrains"
+  ];
+  var FONT_LABELS = {
+    sans: "Archivo",
+    inter: "Inter",
+    sourcesans: "Source Sans 3",
+    serif: "Lora",
+    garamond: "EB Garamond",
+    literata: "Literata",
+    mono: "Azeret Mono",
+    plex: "IBM Plex Mono",
+    jetbrains: "JetBrains Mono"
+  };
   var isFirefoxMobile = /Firefox|FxiOS/i.test(navigator.userAgent) && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   var canHover = !!(window.matchMedia && window.matchMedia("(hover: hover)").matches);
 
@@ -46,8 +62,12 @@
     var downloadButton = document.getElementById("writing-download");
     var newButton = document.getElementById("writing-new");
     var focusButtons = Array.prototype.slice.call(document.querySelectorAll("[data-focus]"));
+    var fontButton = document.getElementById("writing-font-button");
+    var fontDialog = document.getElementById("writing-font-dialog");
+    var fontCloseButton = document.getElementById("writing-font-close");
+    var fontChoices = Array.prototype.slice.call(document.querySelectorAll('input[name="writing-font"]'));
 
-    var state = { focus: "off" };
+    var state = { focus: "off", font: "sans" };
     var saveTimer = null;
     var renderFrame = null;
     var ensureFrame = null;
@@ -86,6 +106,7 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
           body: area.value,
           focus: state.focus,
+          font: state.font,
           updatedAt: Date.now()
         }));
         setSaved("Tersimpan");
@@ -820,11 +841,81 @@
       }
     }
 
-    function applyFocus(mode) {
-      state.focus = FOCUS_MODES.indexOf(mode) >= 0 ? mode : "off";
+    function syncFontChoices() {
+      fontChoices.forEach(function (input) {
+        input.checked = input.value === state.font;
+      });
+
+      if (fontButton) {
+        var label = "Jenis huruf: " + (FONT_LABELS[state.font] || FONT_LABELS.sans);
+        fontButton.setAttribute("aria-label", label);
+        fontButton.setAttribute("title", label);
+      }
+    }
+
+    function isFontDialogOpen() {
+      return !!fontDialog && (fontDialog.open || fontDialog.hasAttribute("open"));
+    }
+
+    function openFontDialog() {
+      if (!fontDialog) return;
+      window.clearTimeout(toolbarHideTimer);
+      toolbarHideTimer = null;
+      syncFontChoices();
+
+      if (typeof fontDialog.showModal === "function") {
+        if (!fontDialog.open) fontDialog.showModal();
+      } else {
+        fontDialog.setAttribute("open", "");
+      }
+
+      var current = fontDialog.querySelector('input[name="writing-font"]:checked');
+      if (current) current.focus({ preventScroll: true });
+    }
+
+    function closeFontDialog() {
+      if (!fontDialog) return;
+
+      if (typeof fontDialog.close === "function") {
+        if (fontDialog.open) fontDialog.close();
+      } else {
+        fontDialog.removeAttribute("open");
+      }
+    }
+
+    function handleFontDialogClosed() {
+      area.focus({ preventScroll: true });
+      kickCaret();
+      grow();
+      scheduleRender();
+      if (isToolbarRevealed()) armToolbarHide();
+    }
+
+    function syncFocusButtons() {
       focusButtons.forEach(function (button) {
         button.setAttribute("aria-pressed", String(button.getAttribute("data-focus") === state.focus));
       });
+    }
+
+    function applyFont(mode, options) {
+      options = options || {};
+      state.font = FONT_MODES.indexOf(mode) >= 0 ? mode : "sans";
+      stage.setAttribute("data-font", state.font);
+      syncFontChoices();
+
+      if (!options.silent) {
+        area.focus({ preventScroll: true });
+        kickCaret();
+        grow();
+        scheduleRender();
+      }
+
+      if (options.persist !== false) queueSave();
+    }
+
+    function applyFocus(mode) {
+      state.focus = FOCUS_MODES.indexOf(mode) >= 0 ? mode : "off";
+      syncFocusButtons();
       area.focus({ preventScroll: true });
       kickCaret();
       scheduleRender();
@@ -837,10 +928,12 @@
         area.value = draft.body;
         state.focus = FOCUS_MODES.indexOf(draft.focus) >= 0 ? draft.focus : "off";
       }
+      if (draft) {
+        state.font = FONT_MODES.indexOf(draft.font) >= 0 ? draft.font : "sans";
+      }
 
-      focusButtons.forEach(function (button) {
-        button.setAttribute("aria-pressed", String(button.getAttribute("data-focus") === state.focus));
-      });
+      syncFocusButtons();
+      applyFont(state.font, { silent: true, persist: false });
 
       updateStats();
       grow();
@@ -1052,6 +1145,24 @@
       });
     });
 
+    if (fontButton) fontButton.addEventListener("click", openFontDialog);
+    if (fontCloseButton) fontCloseButton.addEventListener("click", closeFontDialog);
+
+    if (fontDialog) {
+      fontDialog.addEventListener("close", handleFontDialogClosed);
+      fontDialog.addEventListener("click", function (event) {
+        if (event.target === fontDialog) closeFontDialog();
+      });
+    }
+
+    fontChoices.forEach(function (input) {
+      input.addEventListener("change", function () {
+        if (!input.checked) return;
+        applyFont(input.value, { silent: true });
+        closeFontDialog();
+      });
+    });
+
     fullscreenButton.addEventListener("click", toggleFullscreen);
     copyButton.addEventListener("click", copy);
     downloadButton.addEventListener("click", download);
@@ -1079,6 +1190,13 @@
 
     document.addEventListener("keydown", function (event) {
       if (event.key !== "Escape") return;
+      if (isFontDialogOpen()) {
+        if (typeof fontDialog.showModal !== "function") {
+          closeFontDialog();
+          event.preventDefault();
+        }
+        return;
+      }
       if (isToolbarRevealed()) {
         setToolbarRevealed(false);
         event.preventDefault();
