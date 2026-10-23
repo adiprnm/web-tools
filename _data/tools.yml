@@ -20,7 +20,7 @@
   description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau paragraf.
   group: Teks
   icon: pencil
-  note: Draf disimpan otomatis di browser. Gunakan mode Kalimat atau Paragraf untuk meredupkan bagian lain saat menulis.
+  note: "Draf disimpan otomatis di browser. Mode Kalimat atau Paragraf meredupkan bagian lain, sekaligus menata markdown di bagian fokus. Sintaks yang dikenali: **tebal**, *miring*, ++garis bawah++, ~~coret~~, `kode`, [tautan](url), dan # judul (tagar tetap tampil). Tahan Ctrl/Cmd lalu klik tautan untuk membukanya."
   privacy: Tulisan disimpan di localStorage perangkatmu. Tidak ada data yang dikirim ke server.
 
 - slug: text-obfuscator

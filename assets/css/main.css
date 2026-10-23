@@ -1692,6 +1692,57 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   color: var(--ink);
 }
 
+/* Markdown styles in focus mode.
+   All of these are metric-neutral on purpose: the mirror must keep the
+   exact same character grid as the textarea underneath, otherwise the
+   caret and selection would drift away from the rendered glyphs. */
+
+.writing-mirror .md-marker {
+  color: rgba(21, 27, 24, 0.32);
+}
+
+.writing-mirror .md-strong,
+.writing-mirror .md-heading {
+  -webkit-text-stroke: 0.55px currentColor;
+}
+
+.writing-mirror .md-em {
+  font-style: italic;
+}
+
+.writing-mirror .md-underline {
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.writing-mirror .md-strike {
+  text-decoration-line: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.writing-mirror .md-underline.md-strike {
+  text-decoration-line: underline line-through;
+}
+
+.writing-mirror .md-code {
+  color: var(--ink);
+  background-color: rgba(21, 27, 24, 0.06);
+  border-radius: 2px;
+}
+
+.writing-mirror .md-link {
+  color: var(--accent-strong);
+  text-decoration-line: underline;
+  text-decoration-color: rgba(228, 87, 46, 0.45);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.writing-mirror .md-url {
+  color: rgba(21, 27, 24, 0.42);
+}
+
 .writing-stats {
   display: flex;
   flex-wrap: wrap;

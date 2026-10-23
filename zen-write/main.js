@@ -144,24 +144,6 @@
       return probe;
     }
 
-    function appendSegment(text, start, end, className, position) {
-      var before = text.slice(start, position);
-      var after = text.slice(position, end);
-
-      if (className) {
-        var span = document.createElement("span");
-        span.className = className;
-        if (before) span.appendChild(document.createTextNode(before));
-        span.appendChild(makeProbe());
-        if (after) span.appendChild(document.createTextNode(after));
-        mirror.appendChild(span);
-      } else {
-        if (before) mirror.appendChild(document.createTextNode(before));
-        mirror.appendChild(makeProbe());
-        if (after) mirror.appendChild(document.createTextNode(after));
-      }
-    }
-
     function lineRange(text, position) {
       var start = text.lastIndexOf("\n", Math.max(0, position - 1)) + 1;
       var end = text.indexOf("\n", position);
@@ -206,6 +188,472 @@
       return [start, end];
     }
 
+    /* Markdown awareness
+       ----------------------------------------------------------
+       In focus mode the mirror layer renders the active sentence or
+       paragraph. The textarea underneath still owns the caret, the
+       selection, and click-to-position, so the mirror has to stay on
+       the exact same character grid. Every syntax marker therefore
+       stays in place (quietly styled) and every format is
+       metric-neutral: faux bold via text-stroke, italic via the
+       synthetic oblique face, code via a tint instead of a monospace
+       swap. No glyph advance changes, so the caret never drifts. */
+
+    var markdownCache = { text: null, model: null };
+    var ESCAPABLE = "\\`*_{}[]()#+-.!~<>";
+
+    function repeatChar(char, count) {
+      return new Array(count + 1).join(char);
+    }
+
+    function isWordChar(char) {
+      return !!char && /[\w\u00C0-\u024F]/.test(char);
+    }
+
+    function paragraphLimit(text, from, to) {
+      var blank = text.indexOf("\n\n", from);
+      return blank === -1 || blank > to ? to : blank;
+    }
+
+    function safeUrl(url) {
+      if (/^(https?:|mailto:|tel:)/i.test(url)) return url;
+      if (/^[./#]/.test(url)) return url;
+      return null;
+    }
+
+    function fenceRanges(text) {
+      var ranges = [];
+      var position = 0;
+      var open = null;
+
+      while (position <= text.length) {
+        var newline = text.indexOf("\n", position);
+        var lineEnd = newline === -1 ? text.length : newline;
+        var match = /^ {0,3}(`{3,}|~{3,})/.exec(text.slice(position, lineEnd));
+
+        if (match) {
+          var mark = match[1].charAt(0);
+          if (!open) {
+            open = { start: position, mark: mark, length: match[1].length };
+          } else if (mark === open.mark && match[1].length >= open.length) {
+            ranges.push({ start: open.start, end: lineEnd });
+            open = null;
+          }
+        }
+
+        if (newline === -1) break;
+        position = newline + 1;
+      }
+
+      if (open) ranges.push({ start: open.start, end: text.length });
+      return ranges;
+    }
+
+    function scanHeadings(text, fences) {
+      var overlays = [];
+      var position = 0;
+      var fenceIndex = 0;
+
+      while (position <= text.length) {
+        var newline = text.indexOf("\n", position);
+        var lineEnd = newline === -1 ? text.length : newline;
+
+        while (fenceIndex < fences.length && fences[fenceIndex].end <= position) fenceIndex += 1;
+
+        var inFence = fenceIndex < fences.length
+          && fences[fenceIndex].start <= position
+          && position < fences[fenceIndex].end;
+
+        if (!inFence) {
+          var match = /^ {0,3}(#{1,6})(?:[ \t]+|$)/.exec(text.slice(position, lineEnd));
+
+          if (match) {
+            var markerEnd = position + match[0].length;
+            overlays.push({ start: position, end: markerEnd, classes: ["md-marker"] });
+            if (lineEnd > markerEnd) {
+              overlays.push({ start: markerEnd, end: lineEnd, classes: ["md-heading"] });
+            }
+          }
+        }
+
+        if (newline === -1) break;
+        position = newline + 1;
+      }
+
+      return overlays;
+    }
+
+    function pushRun(runs, start, end, classes) {
+      if (end <= start) return;
+
+      var last = runs[runs.length - 1];
+      if (last && last.end === start && last.classes.join(" ") === classes.join(" ")) {
+        last.end = end;
+        return;
+      }
+
+      runs.push({ start: start, end: end, classes: classes });
+    }
+
+    function findEmphasisClose(text, from, limit, marker) {
+      var char = marker.charAt(0);
+      var position = from;
+
+      while (position < limit) {
+        var current = text.charAt(position);
+
+        if (current === "\\") {
+          position += 2;
+          continue;
+        }
+
+        // Never close emphasis inside an inline code span.
+        if (current === "`") {
+          var run = 0;
+          while (text.charAt(position + run) === "`") run += 1;
+
+          var codeClose = text.indexOf(repeatChar("`", run), position + run);
+          position = codeClose !== -1 && codeClose + run <= limit ? codeClose + run : position + run;
+          continue;
+        }
+
+        if (text.substr(position, marker.length) === marker) {
+          var before = text.charAt(position - 1);
+          var after = text.charAt(position + marker.length);
+          var insideRun = after === char && marker.length > 1;
+
+          if (before && !/\s/.test(before) && !insideRun && (char !== "_" || !isWordChar(after))) {
+            return position;
+          }
+        }
+
+        position += 1;
+      }
+
+      return -1;
+    }
+
+    function matchEmphasis(text, start, to, marker, classes) {
+      var limit = paragraphLimit(text, start, to);
+      var innerStart = start + marker.length;
+
+      if (innerStart >= limit) return null;
+
+      var next = text.charAt(innerStart);
+      if (!next || /\s/.test(next)) return null;
+      if (marker.charAt(0) === "_" && isWordChar(text.charAt(start - 1))) return null;
+
+      var close = findEmphasisClose(text, innerStart, limit, marker);
+      if (close === -1 || close === innerStart) return null;
+
+      return {
+        kind: "inline",
+        end: close + marker.length,
+        openStart: start,
+        openEnd: innerStart,
+        innerStart: innerStart,
+        innerEnd: close,
+        closeStart: close,
+        closeEnd: close + marker.length,
+        classes: classes
+      };
+    }
+
+    function matchCode(text, start, to) {
+      var length = 0;
+      while (text.charAt(start + length) === "`") length += 1;
+
+      var marker = repeatChar("`", length);
+      var close = text.indexOf(marker, start + length);
+
+      if (close === -1 || close + length > to) return null;
+      if (close === start + length) return null;
+      if (text.slice(start + length, close).indexOf("\n\n") !== -1) return null;
+
+      return {
+        kind: "code",
+        end: close + length,
+        openStart: start,
+        openEnd: start + length,
+        innerStart: start + length,
+        innerEnd: close,
+        closeStart: close,
+        closeEnd: close + length,
+        classes: ["md-code"]
+      };
+    }
+
+    function matchLink(text, start, to) {
+      var limit = paragraphLimit(text, start, to);
+      var labelEnd = text.indexOf("](", start + 1);
+
+      if (labelEnd === -1 || labelEnd + 2 > limit) return null;
+
+      var urlEnd = text.indexOf(")", labelEnd + 2);
+      if (urlEnd === -1 || urlEnd >= limit) return null;
+
+      var label = text.slice(start + 1, labelEnd);
+      var url = text.slice(labelEnd + 2, urlEnd);
+
+      if (!label || label.indexOf("\n") !== -1) return null;
+      if (!url || /\s/.test(url)) return null;
+
+      return {
+        kind: "link",
+        href: safeUrl(url),
+        end: urlEnd + 1,
+        openStart: start,
+        openEnd: start + 1,
+        innerStart: start + 1,
+        innerEnd: labelEnd,
+        closeStart: labelEnd,
+        closeEnd: labelEnd + 2,
+        urlStart: labelEnd + 2,
+        urlEnd: urlEnd,
+        urlCloseStart: urlEnd,
+        urlCloseEnd: urlEnd + 1,
+        classes: ["md-link"]
+      };
+    }
+
+    function matchToken(text, start, to) {
+      var char = text.charAt(start);
+
+      if (char === "`") return matchCode(text, start, to);
+      if (char === "[") return matchLink(text, start, to);
+
+      if (char === "~" && text.charAt(start + 1) === "~") {
+        return matchEmphasis(text, start, to, "~~", ["md-strike"]);
+      }
+
+      if (char === "+" && text.charAt(start + 1) === "+") {
+        return matchEmphasis(text, start, to, "++", ["md-underline"]);
+      }
+
+      if (char === "*" || char === "_") {
+        if (text.charAt(start + 1) === char && text.charAt(start + 2) === char) {
+          var triple = matchEmphasis(text, start, to, repeatChar(char, 3), ["md-strong", "md-em"]);
+          if (triple) return triple;
+        }
+
+        if (text.charAt(start + 1) === char) {
+          var pair = matchEmphasis(text, start, to, repeatChar(char, 2), ["md-strong"]);
+          if (pair) return pair;
+        }
+
+        return matchEmphasis(text, start, to, char, ["md-em"]);
+      }
+
+      return null;
+    }
+
+    function renderToken(text, token, classes, runs) {
+      pushRun(runs, token.openStart, token.openEnd, classes.concat("md-marker"));
+
+      if (token.kind === "link") {
+        var labelStart = runs.length;
+        parseInline(text, token.innerStart, token.innerEnd, classes.concat("md-link"), runs);
+        for (var i = labelStart; i < runs.length; i += 1) runs[i].href = token.href;
+
+        pushRun(runs, token.closeStart, token.closeEnd, classes.concat("md-marker"));
+        pushRun(runs, token.urlStart, token.urlEnd, classes.concat("md-url"));
+        pushRun(runs, token.urlCloseStart, token.urlCloseEnd, classes.concat("md-marker"));
+        return;
+      }
+
+      if (token.kind === "inline") {
+        parseInline(text, token.innerStart, token.innerEnd, classes.concat(token.classes), runs);
+      } else {
+        pushRun(runs, token.innerStart, token.innerEnd, classes.concat(token.classes));
+      }
+
+      pushRun(runs, token.closeStart, token.closeEnd, classes.concat("md-marker"));
+    }
+
+    function parseInline(text, from, to, classes, runs) {
+      var position = from;
+      var plainStart = from;
+
+      while (position < to) {
+        var char = text.charAt(position);
+
+        if (char === "\\" && position + 1 < to && ESCAPABLE.indexOf(text.charAt(position + 1)) !== -1) {
+          position += 2;
+          continue;
+        }
+
+        var token = matchToken(text, position, to);
+
+        if (!token) {
+          position += 1;
+          continue;
+        }
+
+        pushRun(runs, plainStart, position, classes);
+        renderToken(text, token, classes, runs);
+        position = token.end;
+        plainStart = position;
+      }
+
+      pushRun(runs, plainStart, to, classes);
+    }
+
+    function inlineRuns(text, fences) {
+      var runs = [];
+      var position = 0;
+
+      fences.forEach(function (fence) {
+        if (fence.start > position) parseInline(text, position, fence.start, [], runs);
+        pushRun(runs, fence.start, fence.end, ["md-code"]);
+        position = fence.end;
+      });
+
+      if (position < text.length) parseInline(text, position, text.length, [], runs);
+
+      return runs;
+    }
+
+    function markdownModel(text) {
+      if (markdownCache.text === text && markdownCache.model) return markdownCache.model;
+
+      var fences = fenceRanges(text);
+      var model = {
+        runs: inlineRuns(text, fences),
+        overlays: scanHeadings(text, fences)
+      };
+
+      markdownCache.text = text;
+      markdownCache.model = model;
+      return model;
+    }
+
+    function uniqueClasses(classes) {
+      var unique = [];
+      classes.forEach(function (name) {
+        if (unique.indexOf(name) === -1) unique.push(name);
+      });
+      return unique;
+    }
+
+    function splitByOverlays(out, run, start, end, overlays) {
+      var cuts = [start, end];
+
+      overlays.forEach(function (overlay) {
+        if (overlay.start > start && overlay.start < end) cuts.push(overlay.start);
+        if (overlay.end > start && overlay.end < end) cuts.push(overlay.end);
+      });
+
+      cuts.sort(function (a, b) { return a - b; });
+
+      for (var i = 0; i < cuts.length - 1; i += 1) {
+        var sliceStart = cuts[i];
+        var sliceEnd = cuts[i + 1];
+
+        if (sliceEnd <= sliceStart) continue;
+
+        var classes = run.classes.slice();
+        overlays.forEach(function (overlay) {
+          if (overlay.start <= sliceStart && overlay.end >= sliceEnd) {
+            classes = classes.concat(overlay.classes);
+          }
+        });
+
+        out.push({
+          start: sliceStart,
+          end: sliceEnd,
+          classes: uniqueClasses(classes),
+          href: run.href || null
+        });
+      }
+    }
+
+    function mergeSegments(segments) {
+      var merged = [];
+
+      segments.forEach(function (segment) {
+        var last = merged[merged.length - 1];
+
+        if (last
+          && last.end === segment.start
+          && last.href === segment.href
+          && last.classes.join(" ") === segment.classes.join(" ")) {
+          last.end = segment.end;
+          return;
+        }
+
+        merged.push(segment);
+      });
+
+      return merged;
+    }
+
+    function styleSegments(text, from, to) {
+      var model = markdownModel(text);
+      var overlays = model.overlays.filter(function (overlay) {
+        return overlay.end > from && overlay.start < to;
+      });
+      var segments = [];
+      var cursor = from;
+
+      for (var index = 0; index < model.runs.length; index += 1) {
+        var run = model.runs[index];
+
+        if (run.end <= from) continue;
+        if (run.start >= to) break;
+
+        var start = Math.max(run.start, from);
+        var end = Math.min(run.end, to);
+
+        if (start > cursor) {
+          segments.push({ start: cursor, end: start, classes: [], href: null });
+        }
+
+        splitByOverlays(segments, run, start, end, overlays);
+        cursor = Math.max(cursor, end);
+      }
+
+      if (cursor < to) {
+        segments.push({ start: cursor, end: to, classes: [], href: null });
+      }
+
+      return mergeSegments(segments);
+    }
+
+    function renderActiveRange(text, from, to, position) {
+      var segments = styleSegments(text, from, to);
+      var caret = Math.max(from, Math.min(position, to));
+      var probeInserted = false;
+
+      segments.forEach(function (segment) {
+        var classes = ["writing-active"].concat(segment.classes).join(" ");
+
+        if (!probeInserted && caret >= segment.start && caret <= segment.end) {
+          appendText(text.slice(segment.start, caret), classes);
+          mirror.appendChild(makeProbe());
+          appendText(text.slice(caret, segment.end), classes);
+          probeInserted = true;
+          return;
+        }
+
+        appendText(text.slice(segment.start, segment.end), classes);
+      });
+
+      if (!probeInserted) mirror.appendChild(makeProbe());
+    }
+
+    function hrefAt(position) {
+      var runs = markdownModel(area.value).runs;
+
+      for (var i = 0; i < runs.length; i += 1) {
+        var run = runs[i];
+
+        if (run.start > position) break;
+        if (run.href && position >= run.start && position <= run.end) return run.href;
+      }
+
+      return null;
+    }
+
     function renderMirror() {
       var text = area.value;
       var position = Math.max(0, Math.min(area.selectionStart, text.length));
@@ -214,38 +662,24 @@
       stage.classList.toggle("is-focus", isFocus);
       stage.classList.toggle("is-empty", text.length === 0);
 
-      var ranges;
-      if (isFocus) {
-        var range = state.focus === "sentence"
-          ? sentenceRange(text, position)
-          : paragraphRange(text, position);
-        ranges = [
-          [0, range[0], "writing-dim"],
-          [range[0], range[1], "writing-active"],
-          [range[1], text.length, "writing-dim"]
-        ];
-      } else {
-        ranges = [[0, text.length, ""]];
+      mirror.textContent = "";
+
+      if (!isFocus) {
+        appendText(text.slice(0, position));
+        mirror.appendChild(makeProbe());
+        appendText(text.slice(position));
+        return;
       }
 
-      mirror.textContent = "";
-      var probeInserted = false;
+      var range = state.focus === "sentence"
+        ? sentenceRange(text, position)
+        : paragraphRange(text, position);
 
-      ranges.forEach(function (part) {
-        var start = part[0];
-        var end = part[1];
-        var className = part[2];
+      if (position < range[0] || position > range[1]) range = [position, position];
 
-        if (probeInserted || position < start || position > end) {
-          appendText(text.slice(start, end), className);
-          return;
-        }
-
-        appendSegment(text, start, end, className, position);
-        probeInserted = true;
-      });
-
-      if (!probeInserted) mirror.appendChild(makeProbe());
+      appendText(text.slice(0, range[0]), "writing-dim");
+      renderActiveRange(text, range[0], range[1], position);
+      appendText(text.slice(range[1]), "writing-dim");
     }
 
     function isZenActive() {
@@ -568,7 +1002,17 @@
       queueSave();
     });
 
-    area.addEventListener("click", function () {
+    area.addEventListener("click", function (event) {
+      if ((event.metaKey || event.ctrlKey) && state.focus !== "off") {
+        var href = hrefAt(area.selectionStart);
+
+        if (href) {
+          event.preventDefault();
+          window.open(href, "_blank", "noopener");
+          return;
+        }
+      }
+
       kickCaret();
       scheduleRender();
     });
