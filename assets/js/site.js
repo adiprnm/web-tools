@@ -4,6 +4,70 @@
   var toastEl = document.getElementById("toast");
   var toastTimer = null;
 
+  var THEME_KEY = "perkakas-theme";
+  var root = document.documentElement;
+  var themeToggle = document.querySelector("[data-theme-toggle]");
+  var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  var darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+
+  function readStoredTheme() {
+    try {
+      var value = localStorage.getItem(THEME_KEY);
+      return value === "dark" || value === "light" ? value : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function systemTheme() {
+    return darkQuery && darkQuery.matches ? "dark" : "light";
+  }
+
+  function applyTheme(theme) {
+    root.dataset.theme = theme;
+
+    if (themeColorMeta) {
+      var color = theme === "dark" ? root.dataset.themeColorDark : root.dataset.themeColorLight;
+      if (color) themeColorMeta.setAttribute("content", color);
+    }
+
+    if (themeToggle) {
+      var label = theme === "dark" ? "Mode terang" : "Mode gelap";
+      themeToggle.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+      themeToggle.setAttribute("aria-label", label);
+      themeToggle.setAttribute("title", label);
+    }
+  }
+
+  // Mode gelap hanya diaktifkan di halaman yang memang punya tombolnya
+  // (Zen Write). Halaman lain selalu memakai tema terang.
+  if (themeToggle) {
+    applyTheme(readStoredTheme() || systemTheme());
+
+    themeToggle.addEventListener("click", function () {
+      var next = root.dataset.theme === "dark" ? "light" : "dark";
+      applyTheme(next);
+      try {
+        localStorage.setItem(THEME_KEY, next);
+      } catch (error) {
+        // localStorage bisa diblokir; tema tetap berlaku untuk sesi ini.
+      }
+    });
+
+    if (darkQuery) {
+      var onSchemeChange = function (event) {
+        // Ikuti sistem hanya bila pengunjung belum memilih sendiri.
+        if (!readStoredTheme()) applyTheme(event.matches ? "dark" : "light");
+      };
+
+      if (darkQuery.addEventListener) {
+        darkQuery.addEventListener("change", onSchemeChange);
+      } else if (darkQuery.addListener) {
+        darkQuery.addListener(onSchemeChange);
+      }
+    }
+  }
+
   function showToast(message, tone) {
     if (!toastEl || !message) return;
 

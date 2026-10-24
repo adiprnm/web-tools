@@ -88,6 +88,24 @@
   --accent-strong: #c9401f;
   --danger: #9e2b12;
 
+  --on-accent: var(--ink);
+  --on-accent-strong: #ffffff;
+  --on-danger: #ffffff;
+  --danger-text: var(--danger);
+
+  --writing-dim: #b9c0b8;
+  --writing-marker: rgba(21, 27, 24, 0.32);
+  --writing-code-bg: rgba(21, 27, 24, 0.06);
+  --writing-url: rgba(21, 27, 24, 0.42);
+  --writing-link-underline: rgba(228, 87, 46, 0.45);
+  --writing-selection: rgba(228, 87, 46, 0.18);
+
+  --shadow-dialog: 0 20px 60px rgba(21, 27, 24, 0.18);
+  --shadow-pop: 0 26px 60px -32px rgba(21, 27, 24, 0.45);
+  --shadow-toolbar: 0 14px 30px -24px rgba(21, 27, 24, 0.5);
+  --backdrop: rgba(21, 27, 24, 0.4);
+  --backdrop-soft: rgba(21, 27, 24, 0.3);
+
   --font-sans: "Archivo", "Helvetica Neue", Arial, sans-serif;
   --font-inter: "Inter", "Helvetica Neue", Arial, sans-serif;
   --font-source-sans: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
@@ -101,6 +119,45 @@
   --shell: 1000px;
   --tool: 780px;
   --gutter: clamp(20px, 4.5vw, 40px);
+
+  color-scheme: light;
+}
+
+/* Mode gelap: kertas dan tinta dibalik, aksen digeser sedikit lebih terang
+   supaya tetap terbaca di atas latar gelap. */
+
+[data-theme="dark"] {
+  --paper: #101310;
+  --surface: #171c18;
+  --surface-muted: #1f2620;
+  --ink: #e9ece6;
+  --ink-soft: #b0b8b1;
+  --muted: #878f89;
+  --line: #2a322c;
+  --line-strong: #3b443d;
+  --accent: #f0663c;
+  --accent-strong: #ff8055;
+  --danger: #d34a24;
+
+  --on-accent: #15110e;
+  --on-accent-strong: #15110e;
+  --on-danger: #ffffff;
+  --danger-text: #ff9d7f;
+
+  --writing-dim: #4a534b;
+  --writing-marker: rgba(233, 236, 230, 0.3);
+  --writing-code-bg: rgba(233, 236, 230, 0.09);
+  --writing-url: rgba(233, 236, 230, 0.42);
+  --writing-link-underline: rgba(240, 102, 60, 0.5);
+  --writing-selection: rgba(240, 102, 60, 0.22);
+
+  --shadow-dialog: 0 20px 60px rgba(0, 0, 0, 0.55);
+  --shadow-pop: 0 26px 60px -32px rgba(0, 0, 0, 0.7);
+  --shadow-toolbar: 0 14px 30px -24px rgba(0, 0, 0, 0.7);
+  --backdrop: rgba(0, 0, 0, 0.6);
+  --backdrop-soft: rgba(0, 0, 0, 0.5);
+
+  color-scheme: dark;
 }
 
 *,
@@ -112,6 +169,7 @@
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  background-color: var(--paper);
 }
 
 body {
@@ -323,6 +381,29 @@ select:focus-visible {
   gap: 18px;
   font-family: var(--font-mono);
   font-size: 0.72rem;
+}
+
+/* Tombol mode gelap hanya muncul di Zen Write, di dalam toolbar tulis.
+   Dua ikon ditumpuk di satu sel grid supaya bisa saling memudar. */
+
+.theme-icon {
+  grid-area: 1 / 1;
+  transition: opacity 0.16s ease, transform 0.26s ease;
+}
+
+.theme-icon--sun {
+  opacity: 0;
+  transform: rotate(-45deg) scale(0.8);
+}
+
+[data-theme="dark"] .theme-icon--sun {
+  opacity: 1;
+  transform: none;
+}
+
+[data-theme="dark"] .theme-icon--moon {
+  opacity: 0;
+  transform: rotate(45deg) scale(0.8);
 }
 
 .site-nav a {
@@ -675,7 +756,7 @@ select:focus-visible {
   margin-top: 5px;
   font-size: 0.8rem;
   font-weight: 500;
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .field-error:empty {
@@ -813,13 +894,13 @@ textarea.input--mono {
 }
 
 .btn--primary {
-  color: var(--ink);
+  color: var(--on-accent);
   background: var(--accent);
   border-color: var(--accent);
 }
 
 .btn--primary:hover {
-  color: #ffffff;
+  color: var(--on-accent-strong);
   background: var(--accent-strong);
   border-color: var(--accent-strong);
 }
@@ -846,7 +927,7 @@ textarea.input--mono {
 }
 
 .btn--danger:hover {
-  color: #ffffff;
+  color: var(--on-danger);
   background: var(--danger);
   border-color: var(--danger);
 }
@@ -880,7 +961,7 @@ textarea.input--mono {
 }
 
 .icon-btn--danger:hover {
-  color: #ffffff;
+  color: var(--on-danger);
   background: var(--danger);
   border-color: var(--danger);
 }
@@ -1363,11 +1444,11 @@ textarea.input--mono {
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: 2px;
-  box-shadow: 0 20px 60px rgba(21, 27, 24, 0.18);
+  box-shadow: var(--shadow-dialog);
 }
 
 .item-dialog::backdrop {
-  background: rgba(21, 27, 24, 0.4);
+  background: var(--backdrop);
 }
 
 .dialog-head {
@@ -1499,6 +1580,7 @@ textarea.input--mono {
 }
 
 .toast[data-tone="error"] {
+  color: var(--on-danger);
   background: var(--danger);
 }
 
@@ -1693,7 +1775,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 3px;
-  box-shadow: 0 26px 60px -32px rgba(21, 27, 24, 0.45);
+  box-shadow: var(--shadow-pop);
 }
 
 .font-dialog[open] {
@@ -1702,7 +1784,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 }
 
 .font-dialog::backdrop {
-  background: rgba(21, 27, 24, 0.3);
+  background: var(--backdrop-soft);
 }
 
 .font-dialog-inner {
@@ -2066,7 +2148,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 }
 
 .writing-area::selection {
-  background: rgba(228, 87, 46, 0.18);
+  background: var(--writing-selection);
 }
 
 .writing-mirror {
@@ -2095,7 +2177,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 .writing-stage:not(.is-empty) .writing-area::selection {
   color: transparent;
   -webkit-text-fill-color: transparent;
-  background: rgba(228, 87, 46, 0.18);
+  background: var(--writing-selection);
 }
 
 .writing-stage:not(.is-empty) .writing-mirror {
@@ -2103,7 +2185,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 }
 
 .writing-dim {
-  color: #b9c0b8;
+  color: var(--writing-dim);
 }
 
 .writing-active {
@@ -2116,7 +2198,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
    caret and selection would drift away from the rendered glyphs. */
 
 .writing-mirror .md-marker {
-  color: rgba(21, 27, 24, 0.32);
+  color: var(--writing-marker);
 }
 
 .writing-mirror .md-strong,
@@ -2145,20 +2227,20 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 
 .writing-mirror .md-code {
   color: var(--ink);
-  background-color: rgba(21, 27, 24, 0.06);
+  background-color: var(--writing-code-bg);
   border-radius: 2px;
 }
 
 .writing-mirror .md-link {
   color: var(--accent-strong);
   text-decoration-line: underline;
-  text-decoration-color: rgba(228, 87, 46, 0.45);
+  text-decoration-color: var(--writing-link-underline);
   text-decoration-thickness: 1px;
   text-underline-offset: 0.18em;
 }
 
 .writing-mirror .md-url {
-  color: rgba(21, 27, 24, 0.42);
+  color: var(--writing-url);
 }
 
 .writing-stats {
@@ -2217,7 +2299,7 @@ body.is-zen-flow .writing-toolbar {
   padding: calc(10px + env(safe-area-inset-top, 0px)) clamp(18px, 4vw, 44px) 10px;
   background: var(--paper);
   border-bottom: 1px solid var(--line);
-  box-shadow: 0 14px 30px -24px rgba(21, 27, 24, 0.5);
+  box-shadow: var(--shadow-toolbar);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;

@@ -1062,11 +1062,11 @@
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");
 
-      var blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      var blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
       var url = URL.createObjectURL(blob);
       var anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = (name || "tanpa-judul") + ".txt";
+      anchor.download = (name || "tanpa-judul") + ".md";
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);

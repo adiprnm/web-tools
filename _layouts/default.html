@@ -1,10 +1,27 @@
 <!DOCTYPE html>
-<html lang="{{ site.lang | default: 'id' }}">
+<html lang="{{ site.lang | default: 'id' }}"{% if page.theme_toggle %} data-theme-color-light="{{ page.theme_color | default: '#f4f5f1' }}" data-theme-color-dark="{{ page.theme_color_dark | default: '#101310' }}"{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="{% if page.theme_toggle %}light dark{% else %}light{% endif %}">
   <meta name="theme-color" content="{{ page.theme_color | default: '#f4f5f1' }}">
+  {% if page.theme_toggle %}
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem("perkakas-theme");
+        var theme = stored === "dark" || stored === "light"
+          ? stored
+          : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        document.documentElement.dataset.theme = theme;
+      } catch (error) {
+        document.documentElement.dataset.theme = "light";
+      }
+    })();
+  </script>
+  {% endif %}
   {% seo %}
   <link rel="icon" href="{{ page.favicon | default: '/assets/favicon.svg' | relative_url }}" type="image/svg+xml">
   <link rel="apple-touch-icon" href="{{ page.apple_touch_icon | default: '/assets/apple-touch-icon.png' | relative_url }}">

@@ -7,6 +7,7 @@ manifest: /zen-write/manifest.json
 favicon: /zen-write/icon.svg
 apple_touch_icon: /zen-write/icon-180.png
 theme_color: "#f4f5f1"
+theme_toggle: true
 pwa: true
 description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau paragraf.
 ---
@@ -30,6 +31,10 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
       <button type="button" class="icon-btn writing-font-btn" id="writing-font-button" aria-label="Jenis huruf" title="Jenis huruf" aria-haspopup="dialog" aria-controls="writing-font-dialog">
         <svg class="icon" aria-hidden="true"><use href="#i-type"></use></svg>
       </button>
+      <button type="button" class="icon-btn icon-btn--theme" id="writing-theme" data-theme-toggle aria-pressed="false" aria-label="Mode gelap" title="Mode gelap">
+        <svg class="icon theme-icon theme-icon--moon" aria-hidden="true"><use href="#i-moon"></use></svg>
+        <svg class="icon theme-icon theme-icon--sun" aria-hidden="true"><use href="#i-sun"></use></svg>
+      </button>
       <div class="writing-actions" role="group" aria-label="Aksi tulisan">
         <button type="button" class="icon-btn" id="writing-fullscreen" aria-label="Layar penuh" title="Layar penuh">
           <svg class="icon" aria-hidden="true"><use href="#i-fullscreen"></use></svg>
@@ -37,7 +42,7 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
         <button type="button" class="icon-btn" id="writing-copy" aria-label="Salin tulisan" title="Salin tulisan">
           <svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg>
         </button>
-        <button type="button" class="icon-btn" id="writing-download" aria-label="Unduh sebagai .txt" title="Unduh .txt">
+        <button type="button" class="icon-btn" id="writing-download" aria-label="Unduh sebagai .md" title="Unduh .md">
           <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
         </button>
         <button type="button" class="icon-btn" id="writing-new" aria-label="Dokumen baru" title="Dokumen baru">
