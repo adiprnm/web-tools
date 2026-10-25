@@ -2147,7 +2147,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   }
 }
 
-/* Lima tombol aksi kini berbagi satu baris. Tombol bilah alat tidak
+/* Empat tombol aksi kini berbagi satu baris. Tombol bilah alat tidak
    boleh menyusut (tombol tema pernah tergencet sampai 2px); kalau
    memang tidak muat, bilah alat membungkus ke baris kedua. */
 .writing-toolbar .segmented,

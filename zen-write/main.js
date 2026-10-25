@@ -110,7 +110,6 @@
     var notesSearch = document.getElementById("writing-notes-search");
     var notesCount = document.getElementById("writing-notes-count");
     var notesHeading = document.getElementById("writing-notes-title");
-    var notesToggle = document.getElementById("writing-notes-toggle");
     var notesTrigger = document.getElementById("writing-notes-trigger");
     var notesClose = document.getElementById("writing-notes-close");
     var notesNew = document.getElementById("writing-notes-new");
@@ -950,7 +949,6 @@
       lockPageScroll();
       document.body.classList.add("is-notes-open");
       notesPanel.setAttribute("aria-hidden", "false");
-      if (notesToggle) notesToggle.setAttribute("aria-expanded", "true");
       if (notesTrigger) notesTrigger.setAttribute("aria-expanded", "true");
 
       // Di layar sempit fokus ke pencarian akan memunculkan keyboard dan
@@ -967,7 +965,6 @@
       document.body.classList.remove("is-notes-open");
       unlockPageScroll();
       notesPanel.setAttribute("aria-hidden", "true");
-      if (notesToggle) notesToggle.setAttribute("aria-expanded", "false");
       if (notesTrigger) notesTrigger.setAttribute("aria-expanded", "false");
     }
 
@@ -2511,13 +2508,12 @@
     /* Daftar catatan
        ---------------------------------------------------------- */
 
-    [notesToggle, notesTrigger].forEach(function (button) {
-      if (!button) return;
-      button.addEventListener("click", function () {
+    if (notesTrigger) {
+      notesTrigger.addEventListener("click", function () {
         if (isPanelOpen()) closePanel();
         else openPanel();
       });
-    });
+    }
 
     if (notesClose) notesClose.addEventListener("click", closePanel);
     if (notesScrim) notesScrim.addEventListener("click", closePanel);
