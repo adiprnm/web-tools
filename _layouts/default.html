@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ site.lang | default: 'id' }}"{% if page.theme_toggle %} data-theme-color-light="{{ page.theme_color | default: '#f4f5f1' }}" data-theme-color-dark="{{ page.theme_color_dark | default: '#101310' }}"{% endif %}>
+<html lang="{{ site.lang | default: 'id' }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,14 +10,18 @@
     (function () {
       try {
         var stored = localStorage.getItem("perkakas-theme");
-        var theme = stored === "dark" || stored === "light"
+        var known = ["paper", "warm", "dusk", "night"];
+        var theme = known.indexOf(stored) >= 0
           ? stored
-          : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark"
-            : "light";
+          : stored === "light" ? "paper" : stored === "dark" ? "night" : null;
+        if (!theme) {
+          theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "night"
+            : "paper";
+        }
         document.documentElement.dataset.theme = theme;
       } catch (error) {
-        document.documentElement.dataset.theme = "light";
+        document.documentElement.dataset.theme = "paper";
       }
     })();
   </script>

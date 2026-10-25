@@ -75,7 +75,12 @@
   font-display: swap;
 }
 
-:root {
+/* Empat tema: dua terang, dua gelap, masing-masing satu netral dan satu
+   hangat. Semua warna di halaman ini mengalir dari token di bawah, jadi
+   menambah tema cukup menyalin satu blok dan mendaftarkannya di site.js. */
+
+:root,
+[data-theme="paper"] {
   --paper: #f4f5f1;
   --surface: #ffffff;
   --surface-muted: #eceee8;
@@ -123,9 +128,47 @@
   color-scheme: light;
 }
 
-/* Mode gelap: kertas dan tinta dibalik, aksen digeser sedikit lebih terang
-   supaya tetap terbaca di atas latar gelap. */
+/* Hangat: kertas tua, tinta cokelat, aksen terakota. */
 
+[data-theme="warm"] {
+  --paper: #f6efe3;
+  --surface: #fbf7ee;
+  --surface-muted: #efe4d1;
+  --ink: #2b2118;
+  --ink-soft: #5a4838;
+  --muted: #7b6853;
+  --line: #e3d6bf;
+  --line-strong: #cdba9c;
+  --accent: #c2551f;
+  --accent-strong: #9e4218;
+  --danger: #a63a12;
+
+  --on-accent: #fdf7ec;
+  --on-accent-strong: #fdf7ec;
+  --on-danger: #fdf7ec;
+  --danger-text: #9c360f;
+
+  --writing-dim: #c8b89f;
+  --writing-marker: rgba(43, 33, 24, 0.32);
+  --writing-code-bg: rgba(43, 33, 24, 0.06);
+  --writing-url: rgba(43, 33, 24, 0.45);
+  --writing-link-underline: rgba(194, 85, 31, 0.45);
+  --writing-selection: rgba(194, 85, 31, 0.18);
+
+  --shadow-dialog: 0 20px 60px rgba(58, 40, 22, 0.18);
+  --shadow-pop: 0 26px 60px -32px rgba(58, 40, 22, 0.45);
+  --shadow-toolbar: 0 14px 30px -24px rgba(58, 40, 22, 0.5);
+  --backdrop: rgba(43, 33, 24, 0.4);
+  --backdrop-soft: rgba(43, 33, 24, 0.3);
+
+  color-scheme: light;
+}
+
+/* Malam: kertas dan tinta dibalik, aksen digeser sedikit lebih terang
+   supaya tetap terbaca di atas latar gelap. Nama lama "dark" tetap
+   dikenali agar pilihan yang tersimpan sebelum tema berganti tidak hilang. */
+
+[data-theme="night"],
 [data-theme="dark"] {
   --paper: #101310;
   --surface: #171c18;
@@ -154,6 +197,42 @@
   --shadow-dialog: 0 20px 60px rgba(0, 0, 0, 0.55);
   --shadow-pop: 0 26px 60px -32px rgba(0, 0, 0, 0.7);
   --shadow-toolbar: 0 14px 30px -24px rgba(0, 0, 0, 0.7);
+  --backdrop: rgba(0, 0, 0, 0.6);
+  --backdrop-soft: rgba(0, 0, 0, 0.5);
+
+  color-scheme: dark;
+}
+
+/* Senja: gelap dengan kehangatan kayu dan amber. */
+
+[data-theme="dusk"] {
+  --paper: #17120f;
+  --surface: #201a15;
+  --surface-muted: #2a221b;
+  --ink: #f1e6d6;
+  --ink-soft: #c0af99;
+  --muted: #92806b;
+  --line: #332a22;
+  --line-strong: #48392d;
+  --accent: #e8814a;
+  --accent-strong: #f79d68;
+  --danger: #d1532b;
+
+  --on-accent: #1a120c;
+  --on-accent-strong: #1a120c;
+  --on-danger: #1a120c;
+  --danger-text: #ff9f78;
+
+  --writing-dim: #5d5041;
+  --writing-marker: rgba(241, 230, 214, 0.3);
+  --writing-code-bg: rgba(241, 230, 214, 0.08);
+  --writing-url: rgba(241, 230, 214, 0.42);
+  --writing-link-underline: rgba(232, 129, 74, 0.5);
+  --writing-selection: rgba(232, 129, 74, 0.22);
+
+  --shadow-dialog: 0 20px 60px rgba(0, 0, 0, 0.6);
+  --shadow-pop: 0 26px 60px -32px rgba(0, 0, 0, 0.72);
+  --shadow-toolbar: 0 14px 30px -24px rgba(0, 0, 0, 0.72);
   --backdrop: rgba(0, 0, 0, 0.6);
   --backdrop-soft: rgba(0, 0, 0, 0.5);
 
@@ -383,27 +462,11 @@ select:focus-visible {
   font-size: 0.72rem;
 }
 
-/* Tombol mode gelap hanya muncul di Zen Write, di dalam toolbar tulis.
-   Dua ikon ditumpuk di satu sel grid supaya bisa saling memudar. */
+/* Pemilih tema hanya muncul di Zen Write, di dalam toolbar tulis.
+   Ikonnya palet, bukan matahari/bulan: pilihannya lebih dari dua. */
 
-.theme-icon {
-  grid-area: 1 / 1;
-  transition: opacity 0.16s ease, transform 0.26s ease;
-}
-
-.theme-icon--sun {
-  opacity: 0;
-  transform: rotate(-45deg) scale(0.8);
-}
-
-[data-theme="dark"] .theme-icon--sun {
-  opacity: 1;
-  transform: none;
-}
-
-[data-theme="dark"] .theme-icon--moon {
-  opacity: 0;
-  transform: rotate(45deg) scale(0.8);
+.writing-theme-btn {
+  flex: 0 0 auto;
 }
 
 .site-nav a {
@@ -1758,14 +1821,14 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   height: 16px;
 }
 
-/* Font dialog: the toolbar keeps a single icon; the three faces are
-   previewed inside the dialog, each in its own typeface. */
+/* Pemilih (dialog) bersama untuk huruf dan tema: satu ikon di bilah alat,
+   pilihannya dipratinjau di dalam dialog. */
 
 .writing-font-btn {
   flex: 0 0 auto;
 }
 
-.font-dialog {
+.pick-dialog {
   display: none;
   width: min(420px, calc(100vw - 32px));
   max-height: min(640px, calc(100vh - 48px));
@@ -1778,16 +1841,16 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   box-shadow: var(--shadow-pop);
 }
 
-.font-dialog[open] {
+.pick-dialog[open] {
   display: flex;
   flex-direction: column;
 }
 
-.font-dialog::backdrop {
+.pick-dialog::backdrop {
   background: var(--backdrop-soft);
 }
 
-.font-dialog-inner {
+.pick-dialog-inner {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
@@ -1798,20 +1861,20 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   scrollbar-color: var(--line-strong) transparent;
 }
 
-.font-dialog-inner::-webkit-scrollbar {
+.pick-dialog-inner::-webkit-scrollbar {
   width: 8px;
 }
 
-.font-dialog-inner::-webkit-scrollbar-thumb {
+.pick-dialog-inner::-webkit-scrollbar-thumb {
   background: var(--line-strong);
   border-radius: 4px;
 }
 
-.font-dialog-inner::-webkit-scrollbar-track {
+.pick-dialog-inner::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.font-dialog-head {
+.pick-dialog-head {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
@@ -1820,7 +1883,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   padding: 18px 18px 0;
 }
 
-.font-dialog-head h2 {
+.pick-dialog-head h2 {
   margin: 0;
   font-family: var(--font-mono);
   font-size: 0.66rem;
@@ -1830,7 +1893,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   color: var(--muted);
 }
 
-.font-options {
+.pick-options {
   display: grid;
   gap: 16px;
 }
@@ -1850,7 +1913,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   color: var(--muted);
 }
 
-.font-option {
+.pick-option {
   position: relative;
   display: flex;
   align-items: center;
@@ -1863,21 +1926,21 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   transition: border-color 0.16s ease, background-color 0.16s ease;
 }
 
-.font-option:hover {
+.pick-option:hover {
   background: var(--surface-muted);
   border-color: var(--line-strong);
 }
 
-.font-option:has(input:checked) {
+.pick-option:has(input:checked) {
   border-color: var(--ink);
 }
 
-.font-option:has(input:focus-visible) {
+.pick-option:has(input:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
-.font-option input {
+.pick-option input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -1885,7 +1948,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   pointer-events: none;
 }
 
-.font-option-sample {
+.pick-option-sample {
   flex: 0 0 auto;
   width: 44px;
   font-size: 1.7rem;
@@ -1893,20 +1956,20 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   text-align: center;
 }
 
-.font-option-body {
+.pick-option-body {
   display: flex;
   flex-direction: column;
   gap: 3px;
   min-width: 0;
 }
 
-.font-option-name {
+.pick-option-name {
   font-size: 0.84rem;
   font-weight: 600;
   line-height: 1.3;
 }
 
-.font-option-preview {
+.pick-option-preview {
   font-size: 0.84rem;
   line-height: 1.4;
   color: var(--ink-soft);
@@ -1915,7 +1978,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   text-overflow: ellipsis;
 }
 
-.font-option-check {
+.pick-option-check {
   flex: 0 0 auto;
   width: 15px;
   height: 15px;
@@ -1924,67 +1987,142 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   opacity: 0;
 }
 
-.font-option:has(input:checked) .font-option-check {
+.pick-option:has(input:checked) .pick-option-check {
   opacity: 1;
 }
 
-.font-option[data-font-choice="sans"] {
+.pick-option[data-font-choice="sans"] {
   font-family: var(--font-sans);
 }
 
-.font-option[data-font-choice="inter"] {
+.pick-option[data-font-choice="inter"] {
   font-family: var(--font-inter);
 }
 
-.font-option[data-font-choice="sourcesans"] {
+.pick-option[data-font-choice="sourcesans"] {
   font-family: var(--font-source-sans);
 }
 
-.font-option[data-font-choice="serif"] {
+.pick-option[data-font-choice="serif"] {
   font-family: var(--font-serif);
 }
 
-.font-option[data-font-choice="garamond"] {
+.pick-option[data-font-choice="garamond"] {
   font-family: var(--font-garamond);
 }
 
-.font-option[data-font-choice="literata"] {
+.pick-option[data-font-choice="literata"] {
   font-family: var(--font-literata);
 }
 
-.font-option[data-font-choice="mono"] {
+.pick-option[data-font-choice="mono"] {
   font-family: var(--font-mono);
 }
 
-.font-option[data-font-choice="plex"] {
+.pick-option[data-font-choice="plex"] {
   font-family: var(--font-plex);
 }
 
-.font-option[data-font-choice="jetbrains"] {
+.pick-option[data-font-choice="jetbrains"] {
   font-family: var(--font-jetbrains);
 }
 
-.font-group[data-family="serif"] .font-option-sample {
+.font-group[data-family="serif"] .pick-option-sample {
   font-size: 1.8rem;
 }
 
-.font-group[data-family="serif"] .font-option-preview {
+.font-group[data-family="serif"] .pick-option-preview {
   font-size: 0.88rem;
 }
 
-.font-group[data-family="mono"] .font-option-sample {
+.font-group[data-family="mono"] .pick-option-sample {
   font-size: 1.32rem;
   letter-spacing: -0.04em;
 }
 
-.font-group[data-family="mono"] .font-option-name {
+.font-group[data-family="mono"] .pick-option-name {
   font-size: 0.8rem;
   letter-spacing: -0.03em;
 }
 
-.font-group[data-family="mono"] .font-option-preview {
+.font-group[data-family="mono"] .pick-option-preview {
   font-size: 0.72rem;
   letter-spacing: -0.03em;
+}
+
+/* Theme dialog: each option carries a miniature of its own paper, ink, and
+   accent, so the choice is readable without applying it first. */
+
+.pick-options--themes {
+  gap: 8px;
+}
+
+.theme-option .pick-option-body {
+  gap: 2px;
+}
+
+.theme-swatch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 40px;
+  overflow: hidden;
+  background: var(--swatch-paper);
+  border: 1px solid var(--swatch-line);
+  border-radius: 2px;
+}
+
+.theme-swatch::before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  right: 9px;
+  height: 13px;
+  background:
+    linear-gradient(var(--swatch-ink), var(--swatch-ink)) 0 0 / 100% 2px no-repeat,
+    linear-gradient(var(--swatch-ink), var(--swatch-ink)) 0 6px / 76% 2px no-repeat,
+    linear-gradient(var(--swatch-ink), var(--swatch-ink)) 0 12px / 54% 2px no-repeat;
+  opacity: 0.7;
+}
+
+.theme-swatch::after {
+  content: "";
+  position: absolute;
+  right: 7px;
+  bottom: 6px;
+  width: 6px;
+  height: 6px;
+  background: var(--swatch-accent);
+  border-radius: 50%;
+}
+
+.theme-option[data-theme-choice="paper"] .theme-swatch {
+  --swatch-paper: #f4f5f1;
+  --swatch-line: #dde1da;
+  --swatch-ink: #4d574f;
+  --swatch-accent: #e4572e;
+}
+
+.theme-option[data-theme-choice="warm"] .theme-swatch {
+  --swatch-paper: #f6efe3;
+  --swatch-line: #e3d6bf;
+  --swatch-ink: #5a4838;
+  --swatch-accent: #c2551f;
+}
+
+.theme-option[data-theme-choice="dusk"] .theme-swatch {
+  --swatch-paper: #17120f;
+  --swatch-line: #332a22;
+  --swatch-ink: #c0af99;
+  --swatch-accent: #e8814a;
+}
+
+.theme-option[data-theme-choice="night"] .theme-swatch {
+  --swatch-paper: #101310;
+  --swatch-line: #2a322c;
+  --swatch-ink: #b0b8b1;
+  --swatch-accent: #f0663c;
 }
 
 @media (max-width: 430px) {
@@ -2043,11 +2181,11 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
     width: 28px;
   }
 
-  .font-dialog-head {
+  .pick-dialog-head {
     padding: 14px 14px 0;
   }
 
-  .font-dialog-inner {
+  .pick-dialog-inner {
     padding: 12px 14px 14px;
   }
 }

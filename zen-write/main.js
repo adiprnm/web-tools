@@ -1796,6 +1796,10 @@
       window.clearTimeout(toolbarHideTimer);
       toolbarHideTimer = window.setTimeout(function () {
         toolbarHideTimer = null;
+        if (hasOpenDialog()) {
+          armToolbarHide(1200);
+          return;
+        }
         if (canHover && toolbar.matches(":hover")) {
           armToolbarHide(1200);
           return;
@@ -1956,6 +1960,12 @@
 
     function isFontDialogOpen() {
       return !!fontDialog && (fontDialog.open || fontDialog.hasAttribute("open"));
+    }
+
+    // Dialog tema dikelola site.js, tetapi bilah alat perlu tahu supaya tidak
+    // menyembunyikan dirinya sendiri selagi dialog masih terbuka.
+    function hasOpenDialog() {
+      return !!document.querySelector("dialog[open]");
     }
 
     function openFontDialog() {
@@ -2476,6 +2486,7 @@
       var modifier = event.metaKey || event.ctrlKey;
 
       if (modifier && !event.altKey && !event.shiftKey && key === "k") {
+        if (hasOpenDialog()) return;
         event.preventDefault();
         if (isPanelOpen()) closePanel();
         else openPanel({ focusSearch: true });
@@ -2519,6 +2530,7 @@
         }
         return;
       }
+      if (hasOpenDialog()) return;
       if (isPanelOpen()) {
         closePanel();
         event.preventDefault();

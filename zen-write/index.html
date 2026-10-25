@@ -31,9 +31,8 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
       <button type="button" class="icon-btn writing-font-btn" id="writing-font-button" aria-label="Jenis huruf" title="Jenis huruf" aria-haspopup="dialog" aria-controls="writing-font-dialog">
         <svg class="icon" aria-hidden="true"><use href="#i-type"></use></svg>
       </button>
-      <button type="button" class="icon-btn icon-btn--theme" id="writing-theme" data-theme-toggle aria-pressed="false" aria-label="Mode gelap" title="Mode gelap">
-        <svg class="icon theme-icon theme-icon--moon" aria-hidden="true"><use href="#i-moon"></use></svg>
-        <svg class="icon theme-icon theme-icon--sun" aria-hidden="true"><use href="#i-sun"></use></svg>
+      <button type="button" class="icon-btn writing-theme-btn" id="writing-theme" data-theme-open aria-haspopup="dialog" aria-controls="writing-theme-dialog" aria-label="Tema tampilan" title="Tema tampilan">
+        <svg class="icon" aria-hidden="true"><use href="#i-palette"></use></svg>
       </button>
       <div class="writing-actions" role="group" aria-label="Aksi tulisan">
         <button type="button" class="icon-btn" id="writing-notes-toggle" aria-label="Daftar catatan" aria-expanded="false" aria-controls="writing-notes" aria-keyshortcuts="Control+K Meta+K" title="Daftar catatan (Ctrl+K)">
@@ -116,105 +115,154 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
   <input type="file" id="writing-notes-file" accept="application/json,.json" hidden>
 </aside>
 
-<dialog class="font-dialog" id="writing-font-dialog" aria-labelledby="writing-font-dialog-title">
-  <div class="font-dialog-head">
+<dialog class="pick-dialog" id="writing-font-dialog" aria-labelledby="writing-font-dialog-title">
+  <div class="pick-dialog-head">
     <h2 id="writing-font-dialog-title">Jenis huruf</h2>
     <button type="button" class="icon-btn" id="writing-font-close" aria-label="Tutup" title="Tutup">
       <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
     </button>
   </div>
-  <div class="font-dialog-inner">
-    <div class="font-options">
+  <div class="pick-dialog-inner">
+    <div class="pick-options">
       <div class="font-group" data-family="sans">
         <h3 class="font-group-label">Sans serif</h3>
-        <label class="font-option" data-font-choice="sans">
+        <label class="pick-option" data-font-choice="sans">
           <input type="radio" name="writing-font" value="sans" checked>
-          <span class="font-option-sample" aria-hidden="true">Aa</span>
-          <span class="font-option-body">
-            <span class="font-option-name">Archivo</span>
-            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          <span class="pick-option-sample" aria-hidden="true">Aa</span>
+          <span class="pick-option-body">
+            <span class="pick-option-name">Archivo</span>
+            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
           </span>
-          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+          <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
-        <label class="font-option" data-font-choice="inter">
+        <label class="pick-option" data-font-choice="inter">
           <input type="radio" name="writing-font" value="inter">
-          <span class="font-option-sample" aria-hidden="true">Aa</span>
-          <span class="font-option-body">
-            <span class="font-option-name">Inter</span>
-            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          <span class="pick-option-sample" aria-hidden="true">Aa</span>
+          <span class="pick-option-body">
+            <span class="pick-option-name">Inter</span>
+            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
           </span>
-          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+          <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
-        <label class="font-option" data-font-choice="sourcesans">
+        <label class="pick-option" data-font-choice="sourcesans">
           <input type="radio" name="writing-font" value="sourcesans">
-          <span class="font-option-sample" aria-hidden="true">Aa</span>
-          <span class="font-option-body">
-            <span class="font-option-name">Source Sans 3</span>
-            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          <span class="pick-option-sample" aria-hidden="true">Aa</span>
+          <span class="pick-option-body">
+            <span class="pick-option-name">Source Sans 3</span>
+            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
           </span>
-          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+          <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
       </div>
       <div class="font-group" data-family="serif">
         <h3 class="font-group-label">Serif</h3>
-        <label class="font-option" data-font-choice="serif">
+        <label class="pick-option" data-font-choice="serif">
           <input type="radio" name="writing-font" value="serif">
-          <span class="font-option-sample" aria-hidden="true">Aa</span>
-          <span class="font-option-body">
-            <span class="font-option-name">Lora</span>
-            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          <span class="pick-option-sample" aria-hidden="true">Aa</span>
+          <span class="pick-option-body">
+            <span class="pick-option-name">Lora</span>
+            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
           </span>
-          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+          <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
-        <label class="font-option" data-font-choice="garamond">
+        <label class="pick-option" data-font-choice="garamond">
           <input type="radio" name="writing-font" value="garamond">
-          <span class="font-option-sample" aria-hidden="true">Aa</span>
-          <span class="font-option-body">
-            <span class="font-option-name">EB Garamond</span>
-            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          <span class="pick-option-sample" aria-hidden="true">Aa</span>
+          <span class="pick-option-body">
+            <span class="pick-option-name">EB Garamond</span>
+            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
           </span>
-          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+          <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
-        <label class="font-option" data-font-choice="literata">
+        <label class="pick-option" data-font-choice="literata">
           <input type="radio" name="writing-font" value="literata">
-          <span class="font-option-sample" aria-hidden="true">Aa</span>
-          <span class="font-option-body">
-            <span class="font-option-name">Literata</span>
-            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          <span class="pick-option-sample" aria-hidden="true">Aa</span>
+          <span class="pick-option-body">
+            <span class="pick-option-name">Literata</span>
+            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
           </span>
-          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+          <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
       </div>
       <div class="font-group" data-family="mono">
         <h3 class="font-group-label">Monospace</h3>
-        <label class="font-option" data-font-choice="mono">
+        <label class="pick-option" data-font-choice="mono">
           <input type="radio" name="writing-font" value="mono">
-          <span class="font-option-sample" aria-hidden="true">Aa</span>
-          <span class="font-option-body">
-            <span class="font-option-name">Azeret Mono</span>
-            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          <span class="pick-option-sample" aria-hidden="true">Aa</span>
+          <span class="pick-option-body">
+            <span class="pick-option-name">Azeret Mono</span>
+            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
           </span>
-          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+          <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
-        <label class="font-option" data-font-choice="plex">
+        <label class="pick-option" data-font-choice="plex">
           <input type="radio" name="writing-font" value="plex">
-          <span class="font-option-sample" aria-hidden="true">Aa</span>
-          <span class="font-option-body">
-            <span class="font-option-name">IBM Plex Mono</span>
-            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          <span class="pick-option-sample" aria-hidden="true">Aa</span>
+          <span class="pick-option-body">
+            <span class="pick-option-name">IBM Plex Mono</span>
+            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
           </span>
-          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+          <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
-        <label class="font-option" data-font-choice="jetbrains">
+        <label class="pick-option" data-font-choice="jetbrains">
           <input type="radio" name="writing-font" value="jetbrains">
-          <span class="font-option-sample" aria-hidden="true">Aa</span>
-          <span class="font-option-body">
-            <span class="font-option-name">JetBrains Mono</span>
-            <span class="font-option-preview">Menulis tenang di pagi hari.</span>
+          <span class="pick-option-sample" aria-hidden="true">Aa</span>
+          <span class="pick-option-body">
+            <span class="pick-option-name">JetBrains Mono</span>
+            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
           </span>
-          <svg class="icon font-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+          <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
       </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="pick-dialog" id="writing-theme-dialog" data-theme-dialog aria-labelledby="writing-theme-dialog-title">
+  <div class="pick-dialog-head">
+    <h2 id="writing-theme-dialog-title">Tema</h2>
+    <button type="button" class="icon-btn" data-theme-close aria-label="Tutup" title="Tutup">
+      <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+    </button>
+  </div>
+  <div class="pick-dialog-inner">
+    <div class="pick-options pick-options--themes">
+      <label class="pick-option theme-option" data-theme-choice="paper">
+        <input type="radio" name="perkakas-theme" value="paper">
+        <span class="theme-swatch" aria-hidden="true"></span>
+        <span class="pick-option-body">
+          <span class="pick-option-name">Kertas</span>
+          <span class="pick-option-preview">Terang, netral</span>
+        </span>
+        <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+      </label>
+      <label class="pick-option theme-option" data-theme-choice="warm">
+        <input type="radio" name="perkakas-theme" value="warm">
+        <span class="theme-swatch" aria-hidden="true"></span>
+        <span class="pick-option-body">
+          <span class="pick-option-name">Hangat</span>
+          <span class="pick-option-preview">Krem, seperti kertas tua</span>
+        </span>
+        <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+      </label>
+      <label class="pick-option theme-option" data-theme-choice="dusk">
+        <input type="radio" name="perkakas-theme" value="dusk">
+        <span class="theme-swatch" aria-hidden="true"></span>
+        <span class="pick-option-body">
+          <span class="pick-option-name">Senja</span>
+          <span class="pick-option-preview">Gelap kehangatan</span>
+        </span>
+        <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+      </label>
+      <label class="pick-option theme-option" data-theme-choice="night">
+        <input type="radio" name="perkakas-theme" value="night">
+        <span class="theme-swatch" aria-hidden="true"></span>
+        <span class="pick-option-body">
+          <span class="pick-option-name">Malam</span>
+          <span class="pick-option-preview">Gelap netral</span>
+        </span>
+        <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
+      </label>
     </div>
   </div>
 </dialog>
