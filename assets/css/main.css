@@ -2147,7 +2147,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   }
 }
 
-/* Empat tombol aksi kini berbagi satu baris. Tombol bilah alat tidak
+/* Tombol aksi berbagi satu baris. Tombol bilah alat tidak
    boleh menyusut (tombol tema pernah tergencet sampai 2px); kalau
    memang tidak muat, bilah alat membungkus ke baris kedua. */
 .writing-toolbar .segmented,
@@ -2494,6 +2494,15 @@ body.is-zen-flow .writing-donate {
    tenang: pemicunya kecil dan setengah transparan, panelnya
    selebar 380px, sisanya ditutup scrim.
    ------------------------------------------------------------ */
+
+/* Dua pemicu, tidak pernah tampil bersamaan: di layar normal tombolnya
+   duduk di bilah alat, di mode zen (bilah alat sebagian besar tersembunyi)
+   tombol diam di sudut kiri atas. */
+body.is-zen #writing-notes-toggle,
+body.is-zen-flow #writing-notes-toggle,
+body.zen-boot #writing-notes-toggle {
+  display: none;
+}
 
 .writing-notes-trigger {
   display: none;
