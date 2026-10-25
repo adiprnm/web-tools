@@ -36,6 +36,9 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
         <svg class="icon theme-icon theme-icon--sun" aria-hidden="true"><use href="#i-sun"></use></svg>
       </button>
       <div class="writing-actions" role="group" aria-label="Aksi tulisan">
+        <button type="button" class="icon-btn" id="writing-notes-toggle" aria-label="Daftar catatan" aria-expanded="false" aria-controls="writing-notes" aria-keyshortcuts="Control+K Meta+K" title="Daftar catatan (Ctrl+K)">
+          <svg class="icon" aria-hidden="true"><use href="#i-notes"></use></svg>
+        </button>
         <button type="button" class="icon-btn" id="writing-fullscreen" aria-label="Layar penuh" title="Layar penuh">
           <svg class="icon" aria-hidden="true"><use href="#i-fullscreen"></use></svg>
         </button>
@@ -45,7 +48,7 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
         <button type="button" class="icon-btn" id="writing-download" aria-label="Unduh sebagai .md" title="Unduh .md">
           <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
         </button>
-        <button type="button" class="icon-btn" id="writing-new" aria-label="Dokumen baru" title="Dokumen baru">
+        <button type="button" class="icon-btn" id="writing-new" aria-label="Catatan baru" title="Catatan baru">
           <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
         </button>
       </div>
@@ -64,6 +67,52 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
     </div>
   </div>
 </div>
+
+<button type="button" class="writing-notes-trigger" id="writing-notes-trigger" aria-label="Daftar catatan" aria-expanded="false" aria-controls="writing-notes" title="Daftar catatan (Ctrl+K)">
+  <svg class="icon" aria-hidden="true"><use href="#i-notes"></use></svg>
+</button>
+
+<div class="notes-scrim" id="writing-notes-scrim"></div>
+
+<aside class="notes-panel" id="writing-notes" aria-label="Daftar catatan" aria-hidden="true">
+  <div class="notes-head">
+    <h2 class="notes-title" id="writing-notes-title">Catatan</h2>
+    <span class="notes-count" id="writing-notes-count">0</span>
+    <button type="button" class="icon-btn notes-close" id="writing-notes-close" aria-label="Tutup daftar" title="Tutup">
+      <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+    </button>
+  </div>
+
+  <div class="notes-search">
+    <svg class="icon notes-search-icon" aria-hidden="true"><use href="#i-search"></use></svg>
+    <input type="search" id="writing-notes-search" class="notes-search-input" placeholder="Cari judul atau isi…" aria-label="Cari catatan" autocomplete="off" spellcheck="false">
+  </div>
+
+  <div class="notes-actions">
+    <button type="button" class="btn btn--small btn--primary" id="writing-notes-new">
+      <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+      Catatan baru
+    </button>
+    <div class="notes-actions-end">
+      <button type="button" class="icon-btn" id="writing-notes-export" aria-label="Ekspor semua catatan" title="Ekspor semua (.json)">
+        <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
+      </button>
+      <button type="button" class="icon-btn" id="writing-notes-import" aria-label="Impor catatan" title="Impor (.json)">
+        <svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg>
+      </button>
+      <button type="button" class="icon-btn" id="writing-notes-trash" aria-label="Sampah" aria-pressed="false" title="Sampah">
+        <svg class="icon" aria-hidden="true"><use href="#i-trash"></use></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="notes-body">
+    <ul class="notes-list" id="writing-notes-list"></ul>
+    <p class="notes-empty" id="writing-notes-empty" hidden>Belum ada catatan.</p>
+  </div>
+
+  <input type="file" id="writing-notes-file" accept="application/json,.json" hidden>
+</aside>
 
 <dialog class="font-dialog" id="writing-font-dialog" aria-labelledby="writing-font-dialog-title">
   <div class="font-dialog-head">

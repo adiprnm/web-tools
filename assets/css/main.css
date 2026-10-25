@@ -2005,6 +2005,31 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   }
 }
 
+/* Lima tombol aksi kini berbagi satu baris. Tombol bilah alat tidak
+   boleh menyusut (tombol tema pernah tergencet sampai 2px); kalau
+   memang tidak muat, bilah alat membungkus ke baris kedua. */
+.writing-toolbar .segmented,
+.writing-toolbar .icon-btn {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 380px) {
+  .writing-toolbar {
+    flex-wrap: wrap;
+    gap: 4px;
+    row-gap: 6px;
+  }
+
+  .writing-toolbar .seg--icon,
+  .writing-toolbar .icon-btn {
+    width: 28px;
+  }
+
+  .writing-toolbar .writing-actions {
+    gap: 2px;
+  }
+}
+
 @media (max-width: 350px) {
   .writing-toolbar {
     gap: 4px;
@@ -2024,6 +2049,13 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 
   .font-dialog-inner {
     padding: 12px 14px 14px;
+  }
+}
+
+@media (max-width: 320px) {
+  .writing-toolbar .seg--icon,
+  .writing-toolbar .icon-btn {
+    width: 26px;
   }
 }
 
@@ -2260,6 +2292,435 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 .writing-saved {
   margin-left: auto;
   color: var(--muted);
+}
+
+/* ------------------------------------------------------------
+   Notes panel
+   Daftar catatan hidup di panel geser supaya ruang tulis tetap
+   tenang: pemicunya kecil dan setengah transparan, panelnya
+   selebar 380px, sisanya ditutup scrim.
+   ------------------------------------------------------------ */
+
+.writing-notes-trigger {
+  display: none;
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  left: env(safe-area-inset-left, 0px);
+  z-index: 515;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  opacity: 0.4;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.writing-notes-trigger .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.writing-notes-trigger:hover,
+.writing-notes-trigger:focus-visible {
+  color: var(--ink);
+  opacity: 1;
+}
+
+.writing-notes-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+body.is-zen .writing-notes-trigger,
+body.is-zen-flow .writing-notes-trigger,
+body.zen-boot .writing-notes-trigger {
+  display: inline-flex;
+}
+
+body.is-toolbar-revealed .writing-notes-trigger {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.notes-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 610;
+  background: var(--backdrop-soft);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s;
+}
+
+body.is-notes-open .notes-scrim {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.notes-panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 620;
+  display: flex;
+  flex-direction: column;
+  width: min(380px, 100vw);
+  color: var(--ink);
+  background: var(--paper);
+  border-right: 1px solid var(--line);
+  box-shadow: var(--shadow-pop);
+  visibility: hidden;
+  transform: translateX(-101%);
+  transition: transform 0.24s ease, visibility 0.24s;
+}
+
+body.is-notes-open {
+  overflow: hidden;
+}
+
+body.is-notes-open .notes-panel {
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.notes-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 12px 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.notes-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.notes-count {
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.notes-close {
+  margin-left: auto;
+}
+
+.notes-search {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  margin: 12px 16px 0;
+}
+
+.notes-search-icon {
+  position: absolute;
+  left: 9px;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* Menaikkan kekhususan supaya aturan input[type="search"] global
+   tidak menimpa padding untuk ikon pencarian. */
+.notes-search-input[type="search"] {
+  width: 100%;
+  padding: 8px 10px 8px 31px;
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  outline: none;
+}
+
+.notes-search-input[type="search"]::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.notes-search-input[type="search"]:hover {
+  border-color: var(--line-strong);
+}
+
+.notes-search-input[type="search"]:focus-visible {
+  border-color: var(--ink);
+}
+
+.notes-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+}
+
+.notes-actions-end {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.notes-actions .icon-btn {
+  width: 30px;
+  height: 30px;
+}
+
+.notes-actions .icon-btn .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.notes-actions .icon-btn[aria-pressed="true"] {
+  color: var(--surface);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.notes-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 8px calc(16px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+.notes-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.notes-body::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 4px;
+}
+
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note-item {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid transparent;
+  border-radius: 2px;
+}
+
+.note-item:hover,
+.note-item:focus-within {
+  background: var(--surface-muted);
+}
+
+.note-item.is-active {
+  background: var(--surface);
+  border-color: var(--line-strong);
+}
+
+.note-open {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 10px;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 2px;
+}
+
+.note-open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.note-open:disabled {
+  cursor: default;
+}
+
+.note-title {
+  display: flex;
+  align-items: baseline;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-item.is-pinned .note-title::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+
+.note-preview,
+.note-meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.note-preview {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.note-meta {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+}
+
+.note-tools {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1px;
+  padding-right: 4px;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+
+.note-item:hover .note-tools,
+.note-item:focus-within .note-tools {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .note-tools {
+    opacity: 1;
+  }
+}
+
+.note-tool {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+}
+
+.note-tool:hover {
+  color: var(--ink);
+  background: var(--paper);
+  border-color: var(--line);
+}
+
+.note-tool.is-on {
+  color: var(--accent);
+}
+
+.note-tool[data-act="delete"]:hover,
+.note-tool[data-act="purge"]:hover {
+  color: var(--on-danger);
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.note-tool .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.note-rename {
+  width: 100%;
+  padding: 1px 3px;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  outline: none;
+}
+
+.notes-empty {
+  margin: 0;
+  padding: 28px 16px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--muted);
+  text-align: center;
+}
+
+.notes-empty[hidden] {
+  display: none;
+}
+
+.notes-clear {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.notes-clear:hover {
+  color: var(--on-danger);
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+@media (max-width: 640px) {
+  .notes-panel {
+    width: 100vw;
+    border-right: 0;
+  }
+
+  /* Di iOS, input dengan huruf di bawah 16px memicu zoom otomatis. */
+  .notes-search-input[type="search"],
+  .note-rename {
+    font-size: 1rem;
+  }
 }
 
 /* Focused screen: a viewport-aware overlay, not the native Fullscreen API */

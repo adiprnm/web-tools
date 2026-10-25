@@ -9,9 +9,17 @@
     });
   }
 
-  var STORAGE_KEY = "zen-write:v1";
-  var LEGACY_STORAGE_KEY = "tulis-tenang:v1";
   var SAVE_DELAY = 500;
+  var DB_NAME = "zen-write";
+  var DB_VERSION = 1;
+  var DB_STORE = "documents";
+  var SETTINGS_KEY = "zen-write:settings:v1";
+  var FALLBACK_KEY = "zen-write:docs-fallback:v1";
+  var LEGACY_BACKUP_KEY = "zen-write:draf-lama:v1";
+  var MIGRATED_KEY = "zen-write:migrasi:v1";
+  var LEGACY_KEYS = ["zen-write:v1", "tulis-tenang:v1"];
+  var MAX_ROWS = 300;
+  var MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
   var WORDS_PER_MINUTE = 200;
   var TOOLBAR_HIDE_DELAY = 2800;
   var TOOLBAR_HINT_DELAY = 2000;
@@ -66,6 +74,21 @@
     var fontButton = document.getElementById("writing-font-button");
     var fontDialog = document.getElementById("writing-font-dialog");
     var fontCloseButton = document.getElementById("writing-font-close");
+    var notesPanel = document.getElementById("writing-notes");
+    var notesScrim = document.getElementById("writing-notes-scrim");
+    var notesList = document.getElementById("writing-notes-list");
+    var notesEmpty = document.getElementById("writing-notes-empty");
+    var notesSearch = document.getElementById("writing-notes-search");
+    var notesCount = document.getElementById("writing-notes-count");
+    var notesHeading = document.getElementById("writing-notes-title");
+    var notesToggle = document.getElementById("writing-notes-toggle");
+    var notesTrigger = document.getElementById("writing-notes-trigger");
+    var notesClose = document.getElementById("writing-notes-close");
+    var notesNew = document.getElementById("writing-notes-new");
+    var notesExport = document.getElementById("writing-notes-export");
+    var notesImport = document.getElementById("writing-notes-import");
+    var notesTrashButton = document.getElementById("writing-notes-trash");
+    var notesFile = document.getElementById("writing-notes-file");
     var fontChoices = Array.prototype.slice.call(document.querySelectorAll('input[name="writing-font"]'));
 
     var state = { focus: "off", font: "sans" };
@@ -87,52 +110,967 @@
       savedEl.textContent = message;
     }
 
-    function readDraft() {
+    /* -------------------------------------------------------------
+       Penyimpanan catatan
+
+       Isi catatan ada di IndexedDB; localStorage hanya menyimpan
+       setelan kecil (huruf, mode fokus, catatan terakhir). Semua
+       catatan dibaca ke memori saat aplikasi dibuka supaya
+       berpindah catatan terasa instan. Kalau IndexedDB tidak
+       tersedia, penyimpanan jatuh ke localStorage dengan bentuk
+       data yang sama agar fiturnya tidak hilang.
+       ------------------------------------------------------------- */
+
+    var docs = [];
+    var current = null;
+    var store = null;
+    var storePromise = null;
+    var writeChain = Promise.resolve();
+    var pendingSave = false;
+    var showingTrash = false;
+    var renamingId = null;
+
+    function newId() {
       try {
-        var raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-          var legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
-          if (legacy) {
-            localStorage.setItem(STORAGE_KEY, legacy);
-            localStorage.removeItem(LEGACY_STORAGE_KEY);
-            raw = legacy;
-          }
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+          return window.crypto.randomUUID();
         }
-        return JSON.parse(raw || "null");
       } catch (error) {
-        return null;
+        // jatuh ke id buatan sendiri
+      }
+      return "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    }
+
+    function cloneDoc(doc) {
+      return {
+        id: doc.id,
+        title: doc.title || "",
+        body: typeof doc.body === "string" ? doc.body : "",
+        createdAt: Number(doc.createdAt) || Date.now(),
+        updatedAt: Number(doc.updatedAt) || Date.now(),
+        pinned: !!doc.pinned,
+        deletedAt: Number(doc.deletedAt) || null
+      };
+    }
+
+    function normalizeDoc(raw) {
+      if (!raw || typeof raw !== "object") return null;
+      var createdAt = Number(raw.createdAt) || Date.now();
+      return {
+        id: typeof raw.id === "string" && raw.id ? raw.id : newId(),
+        title: typeof raw.title === "string" ? raw.title.slice(0, 120) : "",
+        body: typeof raw.body === "string" ? raw.body : "",
+        createdAt: createdAt,
+        updatedAt: Number(raw.updatedAt) || createdAt,
+        pinned: !!raw.pinned,
+        deletedAt: Number(raw.deletedAt) || null
+      };
+    }
+
+    function openDatabase() {
+      return new Promise(function (resolve, reject) {
+        if (!window.indexedDB) {
+          reject(new Error("indexeddb-unavailable"));
+          return;
+        }
+
+        var request;
+        try {
+          request = window.indexedDB.open(DB_NAME, DB_VERSION);
+        } catch (error) {
+          reject(error);
+          return;
+        }
+
+        request.onupgradeneeded = function () {
+          var db = request.result;
+          if (!db.objectStoreNames.contains(DB_STORE)) {
+            var objectStore = db.createObjectStore(DB_STORE, { keyPath: "id" });
+            objectStore.createIndex("updatedAt", "updatedAt", { unique: false });
+          }
+        };
+        request.onsuccess = function () { resolve(request.result); };
+        request.onerror = function () { reject(request.error || new Error("indexeddb-error")); };
+        request.onblocked = function () { reject(new Error("indexeddb-blocked")); };
+      });
+    }
+
+    function indexedDbStore(db) {
+      function run(mode, work) {
+        return new Promise(function (resolve, reject) {
+          var transaction;
+          var request;
+
+          try {
+            transaction = db.transaction(DB_STORE, mode);
+            request = work(transaction.objectStore(DB_STORE));
+          } catch (error) {
+            reject(error);
+            return;
+          }
+
+          transaction.oncomplete = function () {
+            resolve(request ? request.result : undefined);
+          };
+          transaction.onerror = function () {
+            reject(transaction.error || (request && request.error) || new Error("indexeddb-write"));
+          };
+          transaction.onabort = function () {
+            reject(transaction.error || new Error("indexeddb-abort"));
+          };
+        });
+      }
+
+      return {
+        mode: "indexeddb",
+        all: function () {
+          return run("readonly", function (objectStore) { return objectStore.getAll(); })
+            .then(function (rows) { return Array.isArray(rows) ? rows : []; });
+        },
+        put: function (doc) {
+          var snapshot = cloneDoc(doc);
+          return run("readwrite", function (objectStore) { return objectStore.put(snapshot); })
+            .then(function () {});
+        },
+        remove: function (id) {
+          return run("readwrite", function (objectStore) { return objectStore.delete(id); })
+            .then(function () {});
+        }
+      };
+    }
+
+    function fallbackStore() {
+      var cache = null;
+
+      function read() {
+        if (cache) return cache;
+        cache = [];
+        try {
+          var parsed = JSON.parse(localStorage.getItem(FALLBACK_KEY) || "[]");
+          if (Array.isArray(parsed)) cache = parsed;
+        } catch (error) {
+          cache = [];
+        }
+        return cache;
+      }
+
+      function flush() {
+        try {
+          localStorage.setItem(FALLBACK_KEY, JSON.stringify(read()));
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+
+      return {
+        mode: "localstorage",
+        all: function () {
+          return Promise.resolve(read().map(cloneDoc));
+        },
+        put: function (doc) {
+          var list = read();
+          var stored = cloneDoc(doc);
+          var replaced = false;
+
+          for (var i = 0; i < list.length; i += 1) {
+            if (list[i] && list[i].id === stored.id) {
+              list[i] = stored;
+              replaced = true;
+              break;
+            }
+          }
+
+          if (!replaced) list.push(stored);
+          return flush() ? Promise.resolve() : Promise.reject(new Error("localstorage-quota"));
+        },
+        remove: function (id) {
+          cache = read().filter(function (doc) { return doc && doc.id !== id; });
+          return flush() ? Promise.resolve() : Promise.reject(new Error("localstorage-quota"));
+        }
+      };
+    }
+
+    function ensureStore() {
+      if (!storePromise) {
+        storePromise = openDatabase()
+          .then(function (db) { return indexedDbStore(db); })
+          .catch(function () { return fallbackStore(); })
+          .then(function (activeStore) {
+            store = activeStore;
+            return store;
+          });
+      }
+      return storePromise;
+    }
+
+    function readSettings() {
+      try {
+        var parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null");
+        if (parsed && typeof parsed === "object") return parsed;
+      } catch (error) {
+        // setelan rusak, mulai dari kosong
+      }
+      return {};
+    }
+
+    function saveSettings(patch) {
+      var settings = readSettings();
+
+      if (patch) {
+        Object.keys(patch).forEach(function (key) {
+          settings[key] = patch[key];
+        });
+      }
+
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      } catch (error) {
+        // setelan bersifat opsional; gagal menyimpan bukan masalah besar
       }
     }
 
-    function writeDraft() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          body: area.value,
-          focus: state.focus,
-          font: state.font,
-          updatedAt: Date.now()
-        }));
-        setSaved("Tersimpan");
-        return true;
-      } catch (error) {
-        setSaved("Tidak bisa menyimpan");
-        return false;
+    function findDoc(id) {
+      if (!id) return null;
+      for (var i = 0; i < docs.length; i += 1) {
+        if (docs[i].id === id) return docs[i];
       }
+      return null;
+    }
+
+    function newestDoc() {
+      var best = null;
+      docs.forEach(function (doc) {
+        if (doc.deletedAt || isPristine(doc)) return;
+        if (!best || doc.updatedAt > best.updatedAt) best = doc;
+      });
+      return best;
+    }
+
+    function activeDoc(id) {
+      var doc = findDoc(id);
+      if (doc && !doc.deletedAt) return doc;
+      return newestDoc();
+    }
+
+    function createDoc(body) {
+      var now = Date.now();
+      var doc = {
+        id: newId(),
+        title: "",
+        body: typeof body === "string" ? body : "",
+        createdAt: now,
+        updatedAt: now,
+        pinned: false,
+        deletedAt: null
+      };
+      docs.push(doc);
+      return doc;
+    }
+
+    function isPristine(doc) {
+      return !!doc && !doc.deletedAt && !doc.title && !String(doc.body || "").trim();
+    }
+
+    function firstLine(body) {
+      var lines = String(body || "").split("\n");
+
+      for (var i = 0; i < lines.length; i += 1) {
+        var line = lines[i].trim();
+        if (!line) continue;
+        return line
+          .replace(/^(?:#{1,6}|>|[-*+]|\d+[.)])\s+/, "")
+          .replace(/[*_`~]/g, "")
+          .trim();
+      }
+
+      return "";
+    }
+
+    function docTitle(doc) {
+      var manual = String(doc.title || "").trim();
+      var text = manual || firstLine(doc.body);
+      if (!text) return "Tanpa judul";
+      return text.length > 90 ? text.slice(0, 90).trim() + "…" : text;
+    }
+
+    function docPreview(doc) {
+      var lines = String(doc.body || "").split("\n");
+      var start = 0;
+
+      if (!String(doc.title || "").trim()) {
+        while (start < lines.length && !lines[start].trim()) start += 1;
+        start += 1;
+      } else {
+        start = -1;
+      }
+
+      var rest = (start < 0 ? lines : lines.slice(start)).join(" ").replace(/\s+/g, " ").trim();
+      if (!rest) return "";
+      return rest.length > 120 ? rest.slice(0, 120).trim() + "…" : rest;
+    }
+
+    function countWords(text) {
+      var trimmed = String(text || "").trim();
+      return trimmed ? trimmed.split(/\s+/).length : 0;
+    }
+
+    function pad2(value) {
+      return (value < 10 ? "0" : "") + value;
+    }
+
+    function relativeTime(timestamp) {
+      var now = Date.now();
+      var value = Number(timestamp) || now;
+      var diff = now - value;
+
+      if (diff < 45000) return "baru saja";
+      if (diff < 3600000) return Math.max(1, Math.round(diff / 60000)) + " mnt lalu";
+      if (diff < 86400000) return Math.round(diff / 3600000) + " jm lalu";
+      if (diff < 604800000) return Math.round(diff / 86400000) + " hr lalu";
+
+      var date = new Date(value);
+      var label = date.getDate() + " " + MONTHS_SHORT[date.getMonth()];
+      if (date.getFullYear() !== new Date(now).getFullYear()) label += " " + date.getFullYear();
+      return label;
+    }
+
+    function metaText(doc) {
+      var words = countWords(doc.body) + " kata";
+      if (doc.deletedAt) return words + " · dihapus " + relativeTime(doc.deletedAt);
+      return words + " · " + relativeTime(doc.updatedAt);
+    }
+
+    /* Semua tulisan masuk ke satu antrean supaya perubahan yang
+       datang beruntun tidak saling menimpa di IndexedDB. */
+
+    function enqueueWrite(doc) {
+      var snapshot = cloneDoc(doc);
+
+      writeChain = writeChain
+        .then(function () {
+          return ensureStore().then(function (activeStore) {
+            return activeStore.put(snapshot);
+          });
+        })
+        .catch(function () {
+          setSaved("Tidak bisa menyimpan");
+        });
+
+      return writeChain;
+    }
+
+    function commitCurrent() {
+      window.clearTimeout(saveTimer);
+      saveTimer = null;
+
+      if (!current) return;
+
+      var text = area.value;
+      var changed = pendingSave || text !== current.body;
+      current.body = text;
+      if (!changed) return;
+
+      pendingSave = false;
+      current.updatedAt = Date.now();
+      setSaved("Tersimpan");
+      enqueueWrite(current);
+      updateListItem(current);
     }
 
     function queueSave() {
+      pendingSave = true;
       setSaved("Menyimpan…");
       window.clearTimeout(saveTimer);
       saveTimer = window.setTimeout(function () {
         saveTimer = null;
-        writeDraft();
+        commitCurrent();
       }, SAVE_DELAY);
     }
 
-    function saveNow() {
-      window.clearTimeout(saveTimer);
-      saveTimer = null;
-      writeDraft();
+    function openDoc(doc, options) {
+      options = options || {};
+      if (!doc) return;
+      if (current && current.id !== doc.id && !options.skipFlush) commitCurrent();
+
+      current = doc;
+      area.value = typeof doc.body === "string" ? doc.body : "";
+      area.scrollTop = 0;
+      pendingSave = false;
+
+      updateStats();
+      grow();
+      renderMirror();
+      scheduleRender();
+      saveSettings({ activeId: doc.id });
+      setSaved(String(doc.body || "").trim() ? "Draf dipulihkan" : "Siap");
+      markActiveItem();
+
+      if (!options.silent) {
+        area.focus({ preventScroll: true });
+        kickCaret();
+      }
+    }
+
+    function markActiveItem() {
+      if (!notesList) return;
+
+      for (var i = 0; i < notesList.children.length; i += 1) {
+        var row = notesList.children[i];
+        var isActive = !!current && row.getAttribute("data-id") === current.id;
+        row.classList.toggle("is-active", isActive);
+      }
+    }
+
+    function updateListItem(doc) {
+      if (!notesList || renamingId || !isPanelOpen()) return;
+
+      var row = null;
+      for (var i = 0; i < notesList.children.length; i += 1) {
+        if (notesList.children[i].getAttribute("data-id") === doc.id) {
+          row = notesList.children[i];
+          break;
+        }
+      }
+      if (!row) return;
+
+      var titleEl = row.querySelector(".note-title");
+      var metaEl = row.querySelector(".note-meta");
+      var previewEl = row.querySelector(".note-preview");
+      if (titleEl) titleEl.textContent = docTitle(doc);
+      if (metaEl) metaEl.textContent = metaText(doc);
+      if (previewEl) previewEl.textContent = docPreview(doc);
+    }
+
+    function deleteDoc(doc) {
+      if (current && current.id === doc.id) commitCurrent();
+
+      doc.deletedAt = Date.now();
+      enqueueWrite(doc);
+
+      if (current && current.id === doc.id) {
+        openDoc(newestDoc() || createDoc(""), { silent: true, skipFlush: true });
+      }
+
+      renderPanel();
+      toast("Catatan dipindah ke sampah.");
+    }
+
+    function restoreDoc(doc) {
+      doc.deletedAt = null;
+      doc.updatedAt = Date.now();
+      enqueueWrite(doc);
+      renderPanel();
+      toast("Catatan dipulihkan.");
+    }
+
+    function purgeDoc(doc) {
+      if (!window.confirm("Hapus catatan ini permanen? Tindakan ini tidak bisa dibatalkan.")) return;
+
+      docs = docs.filter(function (item) { return item.id !== doc.id; });
+      writeChain = writeChain
+        .then(function () {
+          return ensureStore().then(function (activeStore) { return activeStore.remove(doc.id); });
+        })
+        .catch(function () {});
+
+      if (current && current.id === doc.id) {
+        current = null;
+        openDoc(newestDoc() || createDoc(""), { silent: true, skipFlush: true });
+      }
+
+      renderPanel();
+      toast("Catatan dihapus permanen.");
+    }
+
+    function emptyTrash() {
+      var trashed = docs.filter(function (doc) { return !!doc.deletedAt; });
+      if (!trashed.length) return;
+
+      var message = "Kosongkan sampah? " + trashed.length + " catatan akan dihapus permanen.";
+      if (!window.confirm(message)) return;
+
+      docs = docs.filter(function (doc) { return !doc.deletedAt; });
+      trashed.forEach(function (doc) {
+        writeChain = writeChain
+          .then(function () {
+            return ensureStore().then(function (activeStore) { return activeStore.remove(doc.id); });
+          })
+          .catch(function () {});
+      });
+
+      renderPanel();
+      toast("Sampah dikosongkan.");
+    }
+
+    function togglePin(doc) {
+      doc.pinned = !doc.pinned;
+      enqueueWrite(doc);
+      renderPanel();
+      toast(doc.pinned ? "Catatan disematkan." : "Sematan dilepas.");
+    }
+
+    function beginRename(row, doc) {
+      if (!row || renamingId) return;
+
+      var titleEl = row.querySelector(".note-title");
+      if (!titleEl) return;
+
+      renamingId = doc.id;
+
+      var input = document.createElement("input");
+      input.type = "text";
+      input.className = "note-rename";
+      input.maxLength = 120;
+      input.value = String(doc.title || "").trim() || firstLine(doc.body);
+      input.setAttribute("aria-label", "Judul catatan");
+      titleEl.replaceWith(input);
+      input.focus();
+      input.select();
+
+      var settled = false;
+
+      function finish(commit) {
+        if (settled) return;
+        settled = true;
+        renamingId = null;
+
+        if (commit) {
+          var value = input.value.trim().slice(0, 120);
+          doc.title = value && value !== firstLine(doc.body) ? value : "";
+          doc.updatedAt = Date.now();
+          enqueueWrite(doc);
+          if (current && current.id === doc.id) setSaved("Judul disimpan");
+        }
+
+        renderPanel();
+      }
+
+      input.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          finish(true);
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          finish(false);
+        }
+      });
+      input.addEventListener("blur", function () { finish(true); });
+    }
+
+    /* Daftar catatan
+       ---------------------------------------------------------- */
+
+    function isPanelOpen() {
+      return document.body.classList.contains("is-notes-open");
+    }
+
+    /* Panel mengunci gulir halaman supaya scrim tidak bisa ditembus roda
+       mouse. Scrollbar yang hilang membuat lebar halaman bertambah, jadi
+       padding kanan diisi selebar scrollbar agar isi tidak bergeser. */
+
+    var lockedPadding = null;
+
+    function lockPageScroll() {
+      var gap = window.innerWidth - document.documentElement.clientWidth;
+      if (gap <= 0) return;
+      lockedPadding = document.body.style.paddingRight || "";
+      document.body.style.paddingRight = gap + "px";
+    }
+
+    function unlockPageScroll() {
+      if (lockedPadding === null) return;
+      document.body.style.paddingRight = lockedPadding;
+      lockedPadding = null;
+    }
+
+    function visibleDocs() {
+      var query = notesSearch ? notesSearch.value.trim().toLowerCase() : "";
+
+      return docs.filter(function (doc) {
+        if (showingTrash !== !!doc.deletedAt) return false;
+        if (!showingTrash && isPristine(doc)) return false;
+        if (!query) return true;
+        return (docTitle(doc) + "\n" + doc.body).toLowerCase().indexOf(query) >= 0;
+      }).sort(function (a, b) {
+        if (showingTrash) return (b.deletedAt || 0) - (a.deletedAt || 0);
+        if (!!b.pinned !== !!a.pinned) return b.pinned ? 1 : -1;
+        return (b.updatedAt || 0) - (a.updatedAt || 0);
+      });
+    }
+
+    function noteTool(action, icon, label) {
+      var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      var use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      var button = document.createElement("button");
+
+      svg.setAttribute("class", "icon");
+      svg.setAttribute("aria-hidden", "true");
+      use.setAttribute("href", icon);
+      svg.appendChild(use);
+
+      button.type = "button";
+      button.className = "note-tool";
+      button.setAttribute("data-act", action);
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+      button.appendChild(svg);
+      return button;
+    }
+
+    function noteTools(doc, trashed) {
+      var tools = document.createElement("div");
+      tools.className = "note-tools";
+
+      if (trashed) {
+        tools.appendChild(noteTool("restore", "#i-arrow-left", "Pulihkan"));
+        tools.appendChild(noteTool("purge", "#i-trash", "Hapus permanen"));
+        return tools;
+      }
+
+      var pin = noteTool("pin", "#i-bookmark", doc.pinned ? "Lepas sematan" : "Sematkan");
+      if (doc.pinned) pin.classList.add("is-on");
+      pin.setAttribute("aria-pressed", String(!!doc.pinned));
+      tools.appendChild(pin);
+      tools.appendChild(noteTool("rename", "#i-pencil", "Ubah judul"));
+      tools.appendChild(noteTool("delete", "#i-trash", "Pindahkan ke sampah"));
+      return tools;
+    }
+
+    function noteItem(doc) {
+      var trashed = !!doc.deletedAt;
+      var item = document.createElement("li");
+      var open = document.createElement("button");
+      var title = document.createElement("span");
+      var preview = document.createElement("span");
+      var meta = document.createElement("span");
+      var previewText = docPreview(doc);
+
+      item.className = "note-item";
+      item.setAttribute("data-id", doc.id);
+      if (!trashed && doc.pinned) item.classList.add("is-pinned");
+      if (!trashed && current && current.id === doc.id) item.classList.add("is-active");
+
+      open.type = "button";
+      open.className = "note-open";
+      open.setAttribute("data-act", "open");
+      open.disabled = trashed;
+
+      title.className = "note-title";
+      title.textContent = docTitle(doc);
+      open.appendChild(title);
+
+      if (previewText) {
+        preview.className = "note-preview";
+        preview.textContent = previewText;
+        open.appendChild(preview);
+      }
+
+      meta.className = "note-meta";
+      meta.textContent = metaText(doc);
+      open.appendChild(meta);
+
+      item.appendChild(open);
+      item.appendChild(noteTools(doc, trashed));
+      return item;
+    }
+
+    function renderPanel() {
+      if (!notesList || renamingId) return;
+
+      var rows = visibleDocs();
+      var total = docs.filter(function (doc) {
+        return showingTrash === !!doc.deletedAt;
+      }).length;
+
+      notesList.textContent = "";
+      rows.slice(0, MAX_ROWS).forEach(function (doc) {
+        notesList.appendChild(noteItem(doc));
+      });
+
+      if (rows.length > MAX_ROWS) {
+        var moreRow = document.createElement("li");
+        moreRow.className = "notes-empty";
+        moreRow.textContent = "Menampilkan " + MAX_ROWS + " dari " + rows.length + " catatan. Persempit pencarian untuk melihat sisanya.";
+        notesList.appendChild(moreRow);
+      }
+
+      if (showingTrash && rows.length) {
+        var clearRow = document.createElement("li");
+        var clearButton = document.createElement("button");
+        clearRow.className = "notes-clear-row";
+        clearButton.type = "button";
+        clearButton.className = "notes-clear";
+        clearButton.setAttribute("data-act", "empty-trash");
+        clearButton.textContent = "Kosongkan sampah";
+        clearRow.appendChild(clearButton);
+        notesList.appendChild(clearRow);
+      }
+
+      if (notesHeading) notesHeading.textContent = showingTrash ? "Sampah" : "Catatan";
+      if (notesCount) notesCount.textContent = String(total);
+      if (notesTrashButton) notesTrashButton.setAttribute("aria-pressed", String(showingTrash));
+      if (notesNew) notesNew.hidden = showingTrash;
+
+      if (notesEmpty) {
+        notesEmpty.hidden = rows.length > 0;
+        if (!rows.length) {
+          notesEmpty.textContent = showingTrash
+            ? "Sampah kosong."
+            : notesSearch && notesSearch.value.trim()
+              ? "Tidak ada catatan yang cocok."
+              : "Belum ada catatan. Mulai menulis — semuanya tersimpan otomatis.";
+        }
+      }
+    }
+
+    function openPanel(options) {
+      options = options || {};
+      if (!notesPanel) return;
+
+      if (isPanelOpen()) {
+        if (options.focusSearch && notesSearch) {
+          notesSearch.focus();
+          notesSearch.select();
+        }
+        return;
+      }
+
+      // Tulis dulu perubahan yang masih menunggu debounce, supaya catatan
+      // yang baru saja diketik tidak tampil kosong atau kedaluwarsa.
+      commitCurrent();
+      showingTrash = false;
+      if (notesSearch) notesSearch.value = "";
+      renderPanel();
+
+      // Di ponsel keyboard harus turun lebih dulu: panel ini fixed, jadi
+      // akan tergencet visual viewport kalau keyboard masih terbuka.
+      if (document.activeElement === area) area.blur();
+
+      lockPageScroll();
+      document.body.classList.add("is-notes-open");
+      notesPanel.setAttribute("aria-hidden", "false");
+      if (notesToggle) notesToggle.setAttribute("aria-expanded", "true");
+      if (notesTrigger) notesTrigger.setAttribute("aria-expanded", "true");
+
+      // Di layar sempit fokus ke pencarian akan memunculkan keyboard dan
+      // menutupi daftar; biarkan pengguna memilih sendiri.
+      if (options.focusSearch && notesSearch && window.innerWidth > 720) {
+        notesSearch.focus();
+        notesSearch.select();
+      }
+    }
+
+    function closePanel() {
+      if (!notesPanel || !isPanelOpen()) return;
+
+      document.body.classList.remove("is-notes-open");
+      unlockPageScroll();
+      notesPanel.setAttribute("aria-hidden", "true");
+      if (notesToggle) notesToggle.setAttribute("aria-expanded", "false");
+      if (notesTrigger) notesTrigger.setAttribute("aria-expanded", "false");
+    }
+
+    function toggleTrashView() {
+      showingTrash = !showingTrash;
+      if (notesSearch) notesSearch.value = "";
+      renderPanel();
+    }
+
+    function downloadBlob(blob, filename) {
+      var url = URL.createObjectURL(blob);
+      var anchor = document.createElement("a");
+
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    }
+
+    function exportAll() {
+      commitCurrent();
+
+      var stamp = new Date();
+      var payload = {
+        app: "zen-write",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        settings: { font: state.font, focus: state.focus },
+        documents: docs.filter(function (doc) { return !doc.deletedAt; }).map(cloneDoc)
+      };
+      var name = "zen-write-catatan-"
+        + stamp.getFullYear() + "-" + pad2(stamp.getMonth() + 1) + "-" + pad2(stamp.getDate())
+        + ".json";
+
+      downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }), name);
+      toast("Catatan diekspor.");
+    }
+
+    function importFile(file) {
+      if (!file) return;
+
+      var reader = new FileReader();
+
+      reader.onload = function () {
+        var payload = null;
+        try {
+          payload = JSON.parse(String(reader.result || ""));
+        } catch (error) {
+          payload = null;
+        }
+
+        var rows = payload && Array.isArray(payload.documents)
+          ? payload.documents
+          : Array.isArray(payload) ? payload : null;
+
+        if (!rows) {
+          toast("Berkas tidak dikenali.");
+          return;
+        }
+
+        commitCurrent();
+
+        var imported = 0;
+        rows.forEach(function (raw) {
+          var doc = normalizeDoc(raw);
+          if (!doc) return;
+          if (findDoc(doc.id)) doc.id = newId();
+          doc.deletedAt = null;
+          docs.push(doc);
+          enqueueWrite(doc);
+          imported += 1;
+        });
+
+        if (!imported) {
+          toast("Tidak ada catatan untuk diimpor.");
+          return;
+        }
+
+        if (isPristine(current)) {
+          openDoc(newestDoc() || current, { silent: true, skipFlush: true });
+        }
+
+        renderPanel();
+        toast(imported + " catatan diimpor.");
+      };
+
+      reader.onerror = function () { toast("Gagal membaca berkas."); };
+      reader.readAsText(file);
+    }
+
+    function migrateLegacy(settings) {
+      // Migrasi hanya sekali per browser: dua tab yang terbuka bersamaan
+      // tidak boleh membuat dua salinan dari draf yang sama.
+      try {
+        if (localStorage.getItem(MIGRATED_KEY)) return null;
+      } catch (error) {
+        // localStorage diblokir; migrasi tetap dicoba
+      }
+
+      var raw = null;
+
+      for (var i = 0; i < LEGACY_KEYS.length; i += 1) {
+        try {
+          raw = localStorage.getItem(LEGACY_KEYS[i]);
+        } catch (error) {
+          raw = null;
+        }
+        if (raw) break;
+      }
+
+      if (!raw) return null;
+
+      try {
+        localStorage.setItem(MIGRATED_KEY, "1");
+      } catch (error) {
+        // penanda gagal ditulis; risiko terburuk adalah migrasi ganda
+      }
+
+      var legacy = null;
+      try {
+        legacy = JSON.parse(raw);
+      } catch (error) {
+        legacy = null;
+      }
+
+      // Draf lama tetap disimpan sebagai arsip mentah sebelum kuncinya
+      // dibersihkan, sekadar jaring pengaman kalau migrasi salah baca.
+      try {
+        localStorage.setItem(LEGACY_BACKUP_KEY, raw);
+        LEGACY_KEYS.forEach(function (key) { localStorage.removeItem(key); });
+      } catch (error) {
+        // tidak bisa membersihkan; biarkan saja
+      }
+
+      if (!legacy) return null;
+
+      if (!settings.focus && FOCUS_MODES.indexOf(legacy.focus) >= 0) {
+        state.focus = legacy.focus;
+        syncFocusButtons();
+        saveSettings({ focus: state.focus });
+      }
+
+      if (!settings.font && FONT_MODES.indexOf(legacy.font) >= 0) {
+        state.font = legacy.font;
+        applyFont(state.font, { silent: true, persist: false });
+        saveSettings({ font: state.font });
+      }
+
+      var body = typeof legacy.body === "string" ? legacy.body : "";
+      if (!body.trim()) return null;
+
+      var doc = createDoc(body);
+      enqueueWrite(doc);
+      return doc;
+    }
+
+    function requestPersistence() {
+      if (!navigator.storage || typeof navigator.storage.persist !== "function") return;
+
+      var granted = typeof navigator.storage.persisted === "function"
+        ? navigator.storage.persisted()
+        : Promise.resolve(false);
+
+      granted
+        .then(function (already) { return already ? true : navigator.storage.persist(); })
+        .catch(function () {});
+    }
+
+    function boot() {
+      var settings = readSettings();
+
+      state.focus = FOCUS_MODES.indexOf(settings.focus) >= 0 ? settings.focus : "off";
+      state.font = FONT_MODES.indexOf(settings.font) >= 0 ? settings.font : "sans";
+      syncFocusButtons();
+      applyFont(state.font, { silent: true, persist: false });
+
+      ensureStore()
+        .then(function (activeStore) { return activeStore.all(); })
+        .then(function (rows) {
+          docs = [];
+          rows.forEach(function (raw) {
+            var doc = normalizeDoc(raw);
+            if (doc) docs.push(doc);
+          });
+
+          var migrated = migrateLegacy(settings);
+          var restored = migrated || activeDoc(settings.activeId);
+          openDoc(restored || createDoc(""), { silent: true, skipFlush: true });
+
+          if (store && store.mode === "localstorage") {
+            toast("IndexedDB tidak tersedia; catatan disimpan di localStorage.");
+          }
+
+          requestPersistence();
+        })
+        .catch(function () {
+          openDoc(createDoc(""), { silent: true, skipFlush: true });
+          setSaved("Penyimpanan tidak tersedia");
+          toast("Penyimpanan browser tidak tersedia; tulisan hanya bertahan selama tab terbuka.");
+        });
     }
 
     function updateStats() {
@@ -1002,7 +1940,7 @@
         scheduleRender();
       }
 
-      if (options.persist !== false) queueSave();
+      if (options.persist !== false) saveSettings({ font: state.font });
     }
 
     function applyFocus(mode) {
@@ -1011,26 +1949,7 @@
       area.focus({ preventScroll: true });
       kickCaret();
       scheduleRender();
-      queueSave();
-    }
-
-    function restore() {
-      var draft = readDraft();
-      if (draft && typeof draft.body === "string") {
-        area.value = draft.body;
-        state.focus = FOCUS_MODES.indexOf(draft.focus) >= 0 ? draft.focus : "off";
-      }
-      if (draft) {
-        state.font = FONT_MODES.indexOf(draft.font) >= 0 ? draft.font : "sans";
-      }
-
-      syncFocusButtons();
-      applyFont(state.font, { silent: true, persist: false });
-
-      updateStats();
-      grow();
-      renderMirror();
-      setSaved(draft && draft.body ? "Draf dipulihkan" : "Siap");
+      saveSettings({ focus: state.focus });
     }
 
     function copy() {
@@ -1054,8 +1973,7 @@
         return;
       }
 
-      var firstLine = text.split("\n").find(function (line) { return line.trim().length > 0; });
-      var name = (firstLine || "tanpa-judul")
+      var name = (current ? docTitle(current) : "tanpa-judul")
         .trim()
         .slice(0, 60)
         .toLowerCase()
@@ -1063,31 +1981,29 @@
         .replace(/^-+|-+$/g, "");
 
       var blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
-      var url = URL.createObjectURL(blob);
-      var anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = (name || "tanpa-judul") + ".md";
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      downloadBlob(blob, (name || "tanpa-judul") + ".md");
       toast("Tulisan diunduh.");
     }
 
     function startNew() {
-      if (area.value.trim() && !window.confirm("Mulai dokumen baru? Draf saat ini akan dihapus.")) {
+      commitCurrent();
+      closePanel();
+
+      // Jangan menumpuk catatan kosong: kalau yang terbuka memang masih
+      // kosong dan belum punya judul, pakai catatan itu saja.
+      if (isPristine(current)) {
+        setSaved("Catatan baru");
+        area.focus();
+        kickCaret();
+        scheduleRender();
         return;
       }
 
-      area.value = "";
-      updateStats();
-      grow();
-      renderMirror();
-      saveNow();
-      setSaved("Draf baru");
-      area.focus();
-      kickCaret();
-      scheduleRender();
+      var doc = createDoc("");
+      enqueueWrite(doc);
+      openDoc(doc);
+      setSaved("Catatan baru");
+      toast("Catatan baru");
     }
 
     function updateFullscreenButton() {
@@ -1169,7 +2085,7 @@
         window.clearTimeout(zenHintTimer);
         zenHintTimer = window.setTimeout(function () {
           zenHintTimer = null;
-          if (!isZenActive() || isToolbarRevealed() || document.activeElement === area) return;
+          if (!isZenActive() || isToolbarRevealed() || isPanelOpen() || document.activeElement === area) return;
           setToolbarRevealed(true, TOOLBAR_HINT_DELAY);
         }, 400);
       } else {
@@ -1404,6 +2320,106 @@
     downloadButton.addEventListener("click", download);
     newButton.addEventListener("click", startNew);
 
+    /* Daftar catatan
+       ---------------------------------------------------------- */
+
+    [notesToggle, notesTrigger].forEach(function (button) {
+      if (!button) return;
+      button.addEventListener("click", function () {
+        if (isPanelOpen()) closePanel();
+        else openPanel();
+      });
+    });
+
+    if (notesClose) notesClose.addEventListener("click", closePanel);
+    if (notesScrim) notesScrim.addEventListener("click", closePanel);
+    if (notesNew) notesNew.addEventListener("click", startNew);
+    if (notesExport) notesExport.addEventListener("click", exportAll);
+    if (notesTrashButton) notesTrashButton.addEventListener("click", toggleTrashView);
+
+    if (notesSearch) {
+      var searchTimer = null;
+      notesSearch.addEventListener("input", function () {
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(renderPanel, 120);
+      });
+      notesSearch.addEventListener("keydown", function (event) {
+        if (event.key !== "Enter") return;
+        var rows = visibleDocs();
+        if (!rows.length) return;
+        event.preventDefault();
+        openDoc(rows[0]);
+        closePanel();
+      });
+    }
+
+    if (notesImport && notesFile) {
+      notesImport.addEventListener("click", function () {
+        notesFile.value = "";
+        notesFile.click();
+      });
+      notesFile.addEventListener("change", function () {
+        var file = notesFile.files && notesFile.files[0];
+        notesFile.value = "";
+        importFile(file);
+      });
+    }
+
+    if (notesList) {
+      notesList.addEventListener("click", function (event) {
+        var button = event.target.closest ? event.target.closest("[data-act]") : null;
+        if (!button || !notesList.contains(button)) return;
+
+        var action = button.getAttribute("data-act");
+        if (action === "empty-trash") {
+          emptyTrash();
+          return;
+        }
+
+        var row = button.closest(".note-item");
+        if (!row) return;
+
+        var doc = findDoc(row.getAttribute("data-id"));
+        if (!doc) return;
+
+        if (action === "open") {
+          if (current && current.id === doc.id) {
+            closePanel();
+            return;
+          }
+          openDoc(doc);
+          closePanel();
+          return;
+        }
+
+        if (action === "pin") togglePin(doc);
+        else if (action === "rename") beginRename(row, doc);
+        else if (action === "delete") deleteDoc(doc);
+        else if (action === "restore") restoreDoc(doc);
+        else if (action === "purge") purgeDoc(doc);
+      });
+    }
+
+    document.addEventListener("keydown", function (event) {
+      var key = event.key ? event.key.toLowerCase() : "";
+      var modifier = event.metaKey || event.ctrlKey;
+
+      if (modifier && !event.altKey && !event.shiftKey && key === "k") {
+        event.preventDefault();
+        if (isPanelOpen()) closePanel();
+        else openPanel({ focusSearch: true });
+        return;
+      }
+
+      // Ctrl/Cmd+S selama ini memicu dialog simpan browser; simpan saja
+      // ke penyimpanan sendiri karena setiap perubahan sudah otomatis.
+      if (modifier && !event.altKey && key === "s") {
+        event.preventDefault();
+        commitCurrent();
+        setSaved("Tersimpan");
+      }
+    });
+
     if (toolbarTrigger) {
       toolbarTrigger.addEventListener("click", function () {
         if (isToolbarRevealed()) {
@@ -1433,6 +2449,11 @@
         }
         return;
       }
+      if (isPanelOpen()) {
+        closePanel();
+        event.preventDefault();
+        return;
+      }
       if (isToolbarRevealed()) {
         setToolbarRevealed(false);
         event.preventDefault();
@@ -1449,11 +2470,14 @@
     });
 
     window.addEventListener("beforeunload", function () {
-      if (saveTimer) {
-        window.clearTimeout(saveTimer);
-        writeDraft();
-      }
+      commitCurrent();
     });
+
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") commitCurrent();
+    });
+
+    window.addEventListener("pagehide", commitCurrent);
 
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(function () {
@@ -1462,7 +2486,7 @@
       });
     }
 
-    restore();
+    boot();
     setZen(true);
   });
 })();
