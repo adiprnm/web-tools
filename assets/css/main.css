@@ -1895,6 +1895,10 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 
 .pick-options {
   display: grid;
+  /* One column that can never outgrow the dialog: without an explicit
+     minmax(0, 1fr) the auto track sizes to each option's min-content, and a
+     long unbreakable preview line pushes the whole row past the edge. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -1917,6 +1921,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   position: relative;
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 12px;
   padding: 10px 12px;
   background: var(--surface);
