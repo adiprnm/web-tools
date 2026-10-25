@@ -1689,6 +1689,9 @@ textarea.input--mono {
    ------------------------------------------------------------ */
 
 .writing-room {
+  /* Satu nilai jarak untuk semua tombol bilah alat: tombol tunggal di kiri
+     dan grup aksi di kanan memakai ritme yang sama. */
+  --toolbar-gap: 4px;
   max-width: none;
   margin-inline: 0;
 }
@@ -1706,7 +1709,7 @@ textarea.input--mono {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--toolbar-gap);
   padding-block: 10px;
   background: var(--paper);
 }
@@ -2131,8 +2134,8 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 }
 
 @media (max-width: 430px) {
-  .writing-toolbar {
-    gap: 6px;
+  .writing-room {
+    --toolbar-gap: 3px;
   }
 
   .writing-toolbar .seg--icon {
@@ -2141,10 +2144,6 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 
   .writing-toolbar .icon-btn {
     width: 32px;
-  }
-
-  .writing-toolbar .writing-actions {
-    gap: 3px;
   }
 }
 
@@ -2157,9 +2156,12 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 }
 
 @media (max-width: 380px) {
+  .writing-room {
+    --toolbar-gap: 2px;
+  }
+
   .writing-toolbar {
     flex-wrap: wrap;
-    gap: 4px;
     row-gap: 6px;
   }
 
@@ -2167,17 +2169,9 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   .writing-toolbar .icon-btn {
     width: 28px;
   }
-
-  .writing-toolbar .writing-actions {
-    gap: 2px;
-  }
 }
 
 @media (max-width: 350px) {
-  .writing-toolbar {
-    gap: 4px;
-  }
-
   .writing-toolbar .seg--icon {
     width: 28px;
   }
@@ -2206,7 +2200,7 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   display: flex;
   flex: 0 0 auto;
   flex-wrap: nowrap;
-  gap: 4px;
+  gap: var(--toolbar-gap);
   margin-left: auto;
 }
 
