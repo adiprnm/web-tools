@@ -1,4 +1,4 @@
-var CACHE_NAME = "zen-write-v26";
+var CACHE_NAME = "zen-write-v27";
 var APP_SHELL = [
   "/zen-write/",
   "/zen-write/i18n.js",
