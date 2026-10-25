@@ -10,6 +10,7 @@
   }
 
   var SAVE_DELAY = 500;
+  var MIN_SAVING_DISPLAY = 400;
   var DB_NAME = "zen-write";
   var DB_VERSION = 1;
   var DB_STORE = "documents";
@@ -93,6 +94,7 @@
 
     var state = { focus: "off", font: "sans" };
     var saveTimer = null;
+    var savingHoldTimer = null;
     var renderFrame = null;
     var ensureFrame = null;
     var caretGuardUntil = 0;
@@ -106,8 +108,45 @@
       if (window.Perkakas) window.Perkakas.toast(message);
     }
 
-    function setSaved(message) {
-      savedEl.textContent = message;
+    var SAVED_STATES = {
+      ready: { label: "Siap" },
+      saving: { label: "Menyimpan", icon: "i-spinner" },
+      saved: { label: "Tersimpan", icon: "i-check" },
+      restored: { label: "Draf dipulihkan", icon: "i-check" },
+      created: { label: "Catatan baru", icon: "i-check" },
+      titled: { label: "Judul disimpan", icon: "i-check" },
+      failed: { label: "Tidak bisa menyimpan", tone: "error" },
+      unavailable: { label: "Penyimpanan tidak tersedia", tone: "error" }
+    };
+
+    // Status simpan tampil sebagai ikon supaya baris statistik tetap sunyi;
+    // teksnya pindah ke tooltip dan pembaca layar lewat label tersembunyi.
+    function setSaved(state) {
+      var key = SAVED_STATES[state] ? state : "ready";
+      var spec = SAVED_STATES[key];
+
+      savedEl.textContent = "";
+      savedEl.dataset.state = key;
+      savedEl.title = spec.label;
+
+      if (spec.tone) savedEl.dataset.tone = spec.tone;
+      else delete savedEl.dataset.tone;
+
+      if (spec.icon) {
+        var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("class", "icon writing-saved-icon");
+        svg.setAttribute("aria-hidden", "true");
+
+        var use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+        use.setAttribute("href", "#" + spec.icon);
+        svg.appendChild(use);
+        savedEl.appendChild(svg);
+      }
+
+      var text = document.createElement("span");
+      text.className = spec.icon ? "visually-hidden" : "writing-saved-text";
+      text.textContent = spec.label;
+      savedEl.appendChild(text);
     }
 
     /* -------------------------------------------------------------
@@ -126,6 +165,7 @@
     var store = null;
     var storePromise = null;
     var writeChain = Promise.resolve();
+    var writeSeq = 0;
     var pendingSave = false;
     var showingTrash = false;
     var renamingId = null;
@@ -446,6 +486,17 @@
 
     function enqueueWrite(doc) {
       var snapshot = cloneDoc(doc);
+      var seq = ++writeSeq;
+      var shownAt;
+
+      // Spinner menyala saat penulisan dimulai (yaitu setelah debounce
+      // 500ms), bukan saat mengetik. Karena IndexedDB biasanya selesai
+      // dalam hitungan milidetik, tampilannya ditahan sebentar supaya
+      // tidak sekadar berkedip.
+      window.clearTimeout(savingHoldTimer);
+      savingHoldTimer = null;
+      setSaved("saving");
+      shownAt = Date.now();
 
       writeChain = writeChain
         .then(function () {
@@ -453,8 +504,25 @@
             return activeStore.put(snapshot);
           });
         })
+        .then(function () {
+          if (seq !== writeSeq) return;
+
+          var remaining = MIN_SAVING_DISPLAY - (Date.now() - shownAt);
+          if (remaining <= 0) {
+            setSaved("saved");
+            return;
+          }
+
+          savingHoldTimer = window.setTimeout(function () {
+            savingHoldTimer = null;
+            if (seq === writeSeq) setSaved("saved");
+          }, remaining);
+        })
         .catch(function () {
-          setSaved("Tidak bisa menyimpan");
+          if (seq !== writeSeq) return;
+          window.clearTimeout(savingHoldTimer);
+          savingHoldTimer = null;
+          setSaved("failed");
         });
 
       return writeChain;
@@ -464,23 +532,23 @@
       window.clearTimeout(saveTimer);
       saveTimer = null;
 
-      if (!current) return;
+      if (!current) return false;
 
       var text = area.value;
       var changed = pendingSave || text !== current.body;
       current.body = text;
-      if (!changed) return;
+      if (!changed) return false;
 
       pendingSave = false;
       current.updatedAt = Date.now();
-      setSaved("Tersimpan");
       enqueueWrite(current);
       updateListItem(current);
+
+      return true;
     }
 
     function queueSave() {
       pendingSave = true;
-      setSaved("Menyimpan…");
       window.clearTimeout(saveTimer);
       saveTimer = window.setTimeout(function () {
         saveTimer = null;
@@ -503,7 +571,7 @@
       renderMirror();
       scheduleRender();
       saveSettings({ activeId: doc.id });
-      setSaved(String(doc.body || "").trim() ? "Draf dipulihkan" : "Siap");
+      setSaved(String(doc.body || "").trim() ? "restored" : "ready");
       markActiveItem();
 
       if (!options.silent) {
@@ -640,7 +708,7 @@
           doc.title = value && value !== firstLine(doc.body) ? value : "";
           doc.updatedAt = Date.now();
           enqueueWrite(doc);
-          if (current && current.id === doc.id) setSaved("Judul disimpan");
+          if (current && current.id === doc.id) setSaved("titled");
         }
 
         renderPanel();
@@ -1068,7 +1136,7 @@
         })
         .catch(function () {
           openDoc(createDoc(""), { silent: true, skipFlush: true });
-          setSaved("Penyimpanan tidak tersedia");
+          setSaved("unavailable");
           toast("Penyimpanan browser tidak tersedia; tulisan hanya bertahan selama tab terbuka.");
         });
     }
@@ -1992,7 +2060,7 @@
       // Jangan menumpuk catatan kosong: kalau yang terbuka memang masih
       // kosong dan belum punya judul, pakai catatan itu saja.
       if (isPristine(current)) {
-        setSaved("Catatan baru");
+        setSaved("created");
         area.focus();
         kickCaret();
         scheduleRender();
@@ -2002,7 +2070,7 @@
       var doc = createDoc("");
       enqueueWrite(doc);
       openDoc(doc);
-      setSaved("Catatan baru");
+      setSaved("created");
       toast("Catatan baru");
     }
 
@@ -2415,8 +2483,7 @@
       // ke penyimpanan sendiri karena setiap perubahan sudah otomatis.
       if (modifier && !event.altKey && key === "s") {
         event.preventDefault();
-        commitCurrent();
-        setSaved("Tersimpan");
+        if (!commitCurrent()) setSaved("saved");
       }
     });
 

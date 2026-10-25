@@ -2290,8 +2290,64 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 }
 
 .writing-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   margin-left: auto;
   color: var(--muted);
+}
+
+.writing-saved-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.writing-saved[data-state="saved"],
+.writing-saved[data-state="restored"],
+.writing-saved[data-state="created"],
+.writing-saved[data-state="titled"] {
+  color: var(--ink-soft);
+}
+
+.writing-saved[data-state="saving"] .writing-saved-icon {
+  animation: writing-saved-spin 0.9s linear infinite;
+}
+
+.writing-saved[data-tone="error"] {
+  color: var(--danger-text);
+}
+
+@keyframes writing-saved-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* Tautan traktir jajan: penutup tenang di dasar ruang tulis. Hanya hadir
+   di mode fokus, saat header dan footer situs disembunyikan. */
+
+.writing-donate {
+  display: none;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.6;
+  color: var(--muted);
+  text-align: center;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+body.is-zen .writing-donate,
+body.is-zen-flow .writing-donate {
+  display: block;
+}
+
+.writing-donate:hover {
+  color: var(--accent-strong);
+  text-decoration-color: var(--accent);
 }
 
 /* ------------------------------------------------------------
@@ -2960,11 +3016,6 @@ body.is-zen-flow .writing-area {
 
   .writing-stats {
     gap: 10px;
-  }
-
-  .writing-saved {
-    width: 100%;
-    margin-left: 0;
   }
 }
 
