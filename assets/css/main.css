@@ -2193,12 +2193,13 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   pointer-events: none;
 }
 
+/* Penanda caret di mirror. Sengaja inline (bukan inline-block) dan berisi
+   zero-width no-break space: elemen atomik akan menciptakan peluang pindah
+   baris di tengah kata, sehingga teks yang tampil bisa berbeda dari textarea. */
+
 .writing-caret-probe {
-  display: inline-block;
-  width: 0;
-  height: 1.2em;
-  overflow: hidden;
-  vertical-align: baseline;
+  display: inline;
+  white-space: nowrap;
 }
 
 .writing-stage:not(.is-empty) .writing-area {

@@ -1171,6 +1171,9 @@
       var probe = document.createElement("span");
       probe.className = "writing-caret-probe";
       probe.setAttribute("aria-hidden", "true");
+      // Zero-width no-break space: memberi kotak setinggi baris untuk
+      // mengukur posisi caret tanpa menambah peluang pindah baris.
+      probe.textContent = "\uFEFF";
       return probe;
     }
 
