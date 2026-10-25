@@ -2,6 +2,7 @@
 layout: tool
 tool: zen-write
 title: Zen Write
+lang: en
 body_class: page-writing zen-boot
 manifest: /zen-write/manifest.json
 favicon: /zen-write/icon.svg
@@ -9,45 +10,45 @@ apple_touch_icon: /zen-write/icon-180.png
 theme_color: "#f4f5f1"
 theme_toggle: true
 pwa: true
-description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau paragraf.
+description: A distraction-free writing room with sentence and paragraph focus modes.
 ---
 <div class="writing-room" id="writing-room">
-  <button type="button" class="writing-toolbar-trigger" id="writing-toolbar-trigger" aria-label="Tampilkan alat tulis" aria-expanded="false" aria-controls="writing-toolbar" title="Tampilkan alat tulis">
+  <button type="button" class="writing-toolbar-trigger" id="writing-toolbar-trigger" aria-label="Show writing tools" aria-expanded="false" aria-controls="writing-toolbar" title="Show writing tools" data-i18n-aria-label="toolbar.show" data-i18n-title="toolbar.show">
     <svg class="icon" aria-hidden="true"><use href="#i-grip"></use></svg>
   </button>
   <div class="writing-room-inner">
     <div class="writing-toolbar" id="writing-toolbar">
-      <div class="segmented" role="group" aria-label="Mode fokus">
-        <button type="button" class="seg seg--icon" data-focus="off" aria-pressed="true" aria-label="Fokus mati" title="Fokus mati">
+      <div class="segmented" role="group" aria-label="Focus mode" data-i18n-aria-label="focus.group">
+        <button type="button" class="seg seg--icon" data-focus="off" aria-pressed="true" aria-label="Focus off" title="Focus off" data-i18n-aria-label="focus.off" data-i18n-title="focus.off">
           <svg class="icon" aria-hidden="true"><use href="#i-focus-off"></use></svg>
         </button>
-        <button type="button" class="seg seg--icon" data-focus="sentence" aria-pressed="false" aria-label="Fokus kalimat" title="Fokus kalimat">
+        <button type="button" class="seg seg--icon" data-focus="sentence" aria-pressed="false" aria-label="Sentence focus" title="Sentence focus" data-i18n-aria-label="focus.sentence" data-i18n-title="focus.sentence">
           <svg class="icon" aria-hidden="true"><use href="#i-focus-sentence"></use></svg>
         </button>
-        <button type="button" class="seg seg--icon" data-focus="paragraph" aria-pressed="false" aria-label="Fokus paragraf" title="Fokus paragraf">
+        <button type="button" class="seg seg--icon" data-focus="paragraph" aria-pressed="false" aria-label="Paragraph focus" title="Paragraph focus" data-i18n-aria-label="focus.paragraph" data-i18n-title="focus.paragraph">
           <svg class="icon" aria-hidden="true"><use href="#i-focus-paragraph"></use></svg>
         </button>
       </div>
-      <button type="button" class="icon-btn writing-font-btn" id="writing-font-button" aria-label="Jenis huruf" title="Jenis huruf" aria-haspopup="dialog" aria-controls="writing-font-dialog">
+      <button type="button" class="icon-btn writing-font-btn" id="writing-font-button" aria-label="Typeface" title="Typeface" aria-haspopup="dialog" aria-controls="writing-font-dialog" data-i18n-aria-label="font.button" data-i18n-title="font.button">
         <svg class="icon" aria-hidden="true"><use href="#i-type"></use></svg>
       </button>
-      <button type="button" class="icon-btn writing-theme-btn" id="writing-theme" data-theme-open aria-haspopup="dialog" aria-controls="writing-theme-dialog" aria-label="Tema tampilan" title="Tema tampilan">
+      <button type="button" class="icon-btn writing-theme-btn" id="writing-theme" data-theme-open aria-haspopup="dialog" aria-controls="writing-theme-dialog" aria-label="Appearance theme" title="Appearance theme" data-i18n-aria-label="theme.button" data-i18n-title="theme.button">
         <svg class="icon" aria-hidden="true"><use href="#i-palette"></use></svg>
       </button>
-      <div class="writing-actions" role="group" aria-label="Aksi tulisan">
-        <button type="button" class="icon-btn" id="writing-notes-toggle" aria-label="Daftar catatan" aria-expanded="false" aria-controls="writing-notes" aria-keyshortcuts="Control+K Meta+K" title="Daftar catatan (Ctrl+K)">
+      <div class="writing-actions" role="group" aria-label="Writing actions" data-i18n-aria-label="actions.group">
+        <button type="button" class="icon-btn" id="writing-notes-toggle" aria-label="Notes list" aria-expanded="false" aria-controls="writing-notes" aria-keyshortcuts="Control+K Meta+K" title="Notes list (Ctrl+K)" data-i18n-aria-label="notes.open" data-i18n-title="notes.openTitle">
           <svg class="icon" aria-hidden="true"><use href="#i-notes"></use></svg>
         </button>
-        <button type="button" class="icon-btn" id="writing-fullscreen" aria-label="Layar penuh" title="Layar penuh">
+        <button type="button" class="icon-btn" id="writing-fullscreen" aria-label="Full screen" title="Full screen" data-i18n-aria-label="fullscreen.enter" data-i18n-title="fullscreen.enter">
           <svg class="icon" aria-hidden="true"><use href="#i-fullscreen"></use></svg>
         </button>
-        <button type="button" class="icon-btn" id="writing-copy" aria-label="Salin tulisan" title="Salin tulisan">
+        <button type="button" class="icon-btn" id="writing-copy" aria-label="Copy writing" title="Copy writing" data-i18n-aria-label="copy.button" data-i18n-title="copy.button">
           <svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg>
         </button>
-        <button type="button" class="icon-btn" id="writing-download" aria-label="Unduh sebagai .md" title="Unduh .md">
+        <button type="button" class="icon-btn" id="writing-download" aria-label="Download as .md" title="Download .md" data-i18n-aria-label="download.button" data-i18n-title="download.title">
           <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
         </button>
-        <button type="button" class="icon-btn" id="writing-new" aria-label="Catatan baru" title="Catatan baru">
+        <button type="button" class="icon-btn" id="writing-new" aria-label="New note" title="New note" data-i18n-aria-label="new.button" data-i18n-title="new.button">
           <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
         </button>
       </div>
@@ -55,53 +56,53 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
 
     <div class="writing-stage" id="writing-stage">
       <div class="writing-mirror" id="writing-mirror" aria-hidden="true"></div>
-      <textarea class="writing-area" id="writing-area" spellcheck="true" lang="id" placeholder="Mulai menulis…" aria-label="Area tulisan"></textarea>
+      <textarea class="writing-area" id="writing-area" spellcheck="true" lang="en" placeholder="Start writing…" aria-label="Writing area" data-i18n-placeholder="editor.placeholder" data-i18n-aria-label="editor.label"></textarea>
     </div>
 
     <div class="writing-stats">
-      <span><strong id="writing-words">0</strong> kata</span>
-      <span><strong id="writing-chars">0</strong> karakter</span>
-      <span><strong id="writing-minutes">0</strong> menit baca</span>
-      <span class="writing-saved" id="writing-saved" role="status" aria-live="polite">Siap</span>
+      <span><strong id="writing-words">0</strong> <span data-i18n="stats.words">words</span></span>
+      <span><strong id="writing-chars">0</strong> <span data-i18n="stats.chars">characters</span></span>
+      <span><strong id="writing-minutes">0</strong> <span data-i18n="stats.minutes">min read</span></span>
+      <span class="writing-saved" id="writing-saved" role="status" aria-live="polite">Ready</span>
     </div>
 
-    <a class="writing-donate" href="{{ site.donate_url }}" target="_blank" rel="noopener">Suka Zen Write? Traktir saya jajan</a>
+    <a class="writing-donate" id="writing-donate" href="{{ site.coffee_url }}" target="_blank" rel="noopener" data-donate-en="{{ site.coffee_url }}" data-donate-id="{{ site.donate_url }}" data-i18n="donate.link">Enjoying Zen Write? Buy me a coffee</a>
   </div>
 </div>
 
-<button type="button" class="writing-notes-trigger" id="writing-notes-trigger" aria-label="Daftar catatan" aria-expanded="false" aria-controls="writing-notes" title="Daftar catatan (Ctrl+K)">
+<button type="button" class="writing-notes-trigger" id="writing-notes-trigger" aria-label="Notes list" aria-expanded="false" aria-controls="writing-notes" title="Notes list (Ctrl+K)" data-i18n-aria-label="notes.open" data-i18n-title="notes.openTitle">
   <svg class="icon" aria-hidden="true"><use href="#i-notes"></use></svg>
 </button>
 
 <div class="notes-scrim" id="writing-notes-scrim"></div>
 
-<aside class="notes-panel" id="writing-notes" aria-label="Daftar catatan" aria-hidden="true">
+<aside class="notes-panel" id="writing-notes" aria-label="Notes list" aria-hidden="true" data-i18n-aria-label="notes.panel">
   <div class="notes-head">
-    <h2 class="notes-title" id="writing-notes-title">Catatan</h2>
+    <h2 class="notes-title" id="writing-notes-title">Notes</h2>
     <span class="notes-count" id="writing-notes-count">0</span>
-    <button type="button" class="icon-btn notes-close" id="writing-notes-close" aria-label="Tutup daftar" title="Tutup">
+    <button type="button" class="icon-btn notes-close" id="writing-notes-close" aria-label="Close list" title="Close" data-i18n-aria-label="notes.close" data-i18n-title="notes.closeTitle">
       <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
     </button>
   </div>
 
   <div class="notes-search">
     <svg class="icon notes-search-icon" aria-hidden="true"><use href="#i-search"></use></svg>
-    <input type="search" id="writing-notes-search" class="notes-search-input" placeholder="Cari judul atau isi…" aria-label="Cari catatan" autocomplete="off" spellcheck="false">
+    <input type="search" id="writing-notes-search" class="notes-search-input" placeholder="Search title or content…" aria-label="Search notes" autocomplete="off" spellcheck="false" data-i18n-placeholder="notes.search" data-i18n-aria-label="notes.searchLabel">
   </div>
 
   <div class="notes-actions">
     <button type="button" class="btn btn--small btn--primary" id="writing-notes-new">
       <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
-      Catatan baru
+      <span data-i18n="notes.new">New note</span>
     </button>
     <div class="notes-actions-end">
-      <button type="button" class="icon-btn" id="writing-notes-export" aria-label="Ekspor semua catatan" title="Ekspor semua (.json)">
+      <button type="button" class="icon-btn" id="writing-notes-export" aria-label="Export all notes" title="Export all (.json)" data-i18n-aria-label="notes.export" data-i18n-title="notes.exportTitle">
         <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
       </button>
-      <button type="button" class="icon-btn" id="writing-notes-import" aria-label="Impor catatan" title="Impor (.json)">
+      <button type="button" class="icon-btn" id="writing-notes-import" aria-label="Import notes" title="Import (.json)" data-i18n-aria-label="notes.import" data-i18n-title="notes.importTitle">
         <svg class="icon" aria-hidden="true"><use href="#i-upload"></use></svg>
       </button>
-      <button type="button" class="icon-btn" id="writing-notes-trash" aria-label="Sampah" aria-pressed="false" title="Sampah">
+      <button type="button" class="icon-btn" id="writing-notes-trash" aria-label="Trash" aria-pressed="false" title="Trash" data-i18n-aria-label="notes.trash" data-i18n-title="notes.trash">
         <svg class="icon" aria-hidden="true"><use href="#i-trash"></use></svg>
       </button>
     </div>
@@ -109,7 +110,14 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
 
   <div class="notes-body">
     <ul class="notes-list" id="writing-notes-list"></ul>
-    <p class="notes-empty" id="writing-notes-empty" hidden>Belum ada catatan.</p>
+    <p class="notes-empty" id="writing-notes-empty" hidden data-i18n="notes.emptyInitial">No notes yet.</p>
+  </div>
+
+  <div class="notes-foot">
+    <button type="button" class="notes-lang" id="writing-lang" aria-label="Language: English. Switch to Indonesian." title="Language: English. Switch to Indonesian." data-i18n-aria-label="lang.toggle" data-i18n-title="lang.toggle">
+      <span class="notes-lang-label" data-i18n="lang.label">Language</span>
+      <span class="notes-lang-code" id="writing-lang-code" aria-hidden="true">EN</span>
+    </button>
   </div>
 
   <input type="file" id="writing-notes-file" accept="application/json,.json" hidden>
@@ -117,21 +125,21 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
 
 <dialog class="pick-dialog" id="writing-font-dialog" aria-labelledby="writing-font-dialog-title">
   <div class="pick-dialog-head">
-    <h2 id="writing-font-dialog-title">Jenis huruf</h2>
-    <button type="button" class="icon-btn" id="writing-font-close" aria-label="Tutup" title="Tutup">
+    <h2 id="writing-font-dialog-title" data-i18n="font.dialog">Typeface</h2>
+    <button type="button" class="icon-btn" id="writing-font-close" aria-label="Close" title="Close" data-i18n-aria-label="dialog.close" data-i18n-title="dialog.close">
       <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
     </button>
   </div>
   <div class="pick-dialog-inner">
     <div class="pick-options">
       <div class="font-group" data-family="sans">
-        <h3 class="font-group-label">Sans serif</h3>
+        <h3 class="font-group-label" data-i18n="font.group.sans">Sans serif</h3>
         <label class="pick-option" data-font-choice="sans">
           <input type="radio" name="writing-font" value="sans" checked>
           <span class="pick-option-sample" aria-hidden="true">Aa</span>
           <span class="pick-option-body">
             <span class="pick-option-name">Archivo</span>
-            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
+            <span class="pick-option-preview" data-i18n="font.preview">Writing quietly in the morning.</span>
           </span>
           <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
@@ -140,7 +148,7 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
           <span class="pick-option-sample" aria-hidden="true">Aa</span>
           <span class="pick-option-body">
             <span class="pick-option-name">Inter</span>
-            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
+            <span class="pick-option-preview" data-i18n="font.preview">Writing quietly in the morning.</span>
           </span>
           <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
@@ -149,19 +157,19 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
           <span class="pick-option-sample" aria-hidden="true">Aa</span>
           <span class="pick-option-body">
             <span class="pick-option-name">Source Sans 3</span>
-            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
+            <span class="pick-option-preview" data-i18n="font.preview">Writing quietly in the morning.</span>
           </span>
           <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
       </div>
       <div class="font-group" data-family="serif">
-        <h3 class="font-group-label">Serif</h3>
+        <h3 class="font-group-label" data-i18n="font.group.serif">Serif</h3>
         <label class="pick-option" data-font-choice="serif">
           <input type="radio" name="writing-font" value="serif">
           <span class="pick-option-sample" aria-hidden="true">Aa</span>
           <span class="pick-option-body">
             <span class="pick-option-name">Lora</span>
-            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
+            <span class="pick-option-preview" data-i18n="font.preview">Writing quietly in the morning.</span>
           </span>
           <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
@@ -170,7 +178,7 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
           <span class="pick-option-sample" aria-hidden="true">Aa</span>
           <span class="pick-option-body">
             <span class="pick-option-name">EB Garamond</span>
-            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
+            <span class="pick-option-preview" data-i18n="font.preview">Writing quietly in the morning.</span>
           </span>
           <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
@@ -179,19 +187,19 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
           <span class="pick-option-sample" aria-hidden="true">Aa</span>
           <span class="pick-option-body">
             <span class="pick-option-name">Literata</span>
-            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
+            <span class="pick-option-preview" data-i18n="font.preview">Writing quietly in the morning.</span>
           </span>
           <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
       </div>
       <div class="font-group" data-family="mono">
-        <h3 class="font-group-label">Monospace</h3>
+        <h3 class="font-group-label" data-i18n="font.group.mono">Monospace</h3>
         <label class="pick-option" data-font-choice="mono">
           <input type="radio" name="writing-font" value="mono">
           <span class="pick-option-sample" aria-hidden="true">Aa</span>
           <span class="pick-option-body">
             <span class="pick-option-name">Azeret Mono</span>
-            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
+            <span class="pick-option-preview" data-i18n="font.preview">Writing quietly in the morning.</span>
           </span>
           <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
@@ -200,7 +208,7 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
           <span class="pick-option-sample" aria-hidden="true">Aa</span>
           <span class="pick-option-body">
             <span class="pick-option-name">IBM Plex Mono</span>
-            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
+            <span class="pick-option-preview" data-i18n="font.preview">Writing quietly in the morning.</span>
           </span>
           <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
@@ -209,7 +217,7 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
           <span class="pick-option-sample" aria-hidden="true">Aa</span>
           <span class="pick-option-body">
             <span class="pick-option-name">JetBrains Mono</span>
-            <span class="pick-option-preview">Menulis tenang di pagi hari.</span>
+            <span class="pick-option-preview" data-i18n="font.preview">Writing quietly in the morning.</span>
           </span>
           <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
         </label>
@@ -220,8 +228,8 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
 
 <dialog class="pick-dialog" id="writing-theme-dialog" data-theme-dialog aria-labelledby="writing-theme-dialog-title">
   <div class="pick-dialog-head">
-    <h2 id="writing-theme-dialog-title">Tema</h2>
-    <button type="button" class="icon-btn" data-theme-close aria-label="Tutup" title="Tutup">
+    <h2 id="writing-theme-dialog-title" data-i18n="theme.dialog">Theme</h2>
+    <button type="button" class="icon-btn" data-theme-close aria-label="Close" title="Close" data-i18n-aria-label="dialog.close" data-i18n-title="dialog.close">
       <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
     </button>
   </div>
@@ -231,8 +239,8 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
         <input type="radio" name="perkakas-theme" value="paper">
         <span class="theme-swatch" aria-hidden="true"></span>
         <span class="pick-option-body">
-          <span class="pick-option-name">Kertas</span>
-          <span class="pick-option-preview">Terang, netral</span>
+          <span class="pick-option-name" data-i18n="theme.paper">Paper</span>
+          <span class="pick-option-preview" data-i18n="theme.paper.desc">Light, neutral</span>
         </span>
         <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
       </label>
@@ -240,8 +248,8 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
         <input type="radio" name="perkakas-theme" value="warm">
         <span class="theme-swatch" aria-hidden="true"></span>
         <span class="pick-option-body">
-          <span class="pick-option-name">Hangat</span>
-          <span class="pick-option-preview">Krem, seperti kertas tua</span>
+          <span class="pick-option-name" data-i18n="theme.warm">Warm</span>
+          <span class="pick-option-preview" data-i18n="theme.warm.desc">Cream, like old paper</span>
         </span>
         <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
       </label>
@@ -249,8 +257,8 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
         <input type="radio" name="perkakas-theme" value="dusk">
         <span class="theme-swatch" aria-hidden="true"></span>
         <span class="pick-option-body">
-          <span class="pick-option-name">Senja</span>
-          <span class="pick-option-preview">Gelap kehangatan</span>
+          <span class="pick-option-name" data-i18n="theme.dusk">Dusk</span>
+          <span class="pick-option-preview" data-i18n="theme.dusk.desc">Warm dark</span>
         </span>
         <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
       </label>
@@ -258,8 +266,8 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
         <input type="radio" name="perkakas-theme" value="night">
         <span class="theme-swatch" aria-hidden="true"></span>
         <span class="pick-option-body">
-          <span class="pick-option-name">Malam</span>
-          <span class="pick-option-preview">Gelap netral</span>
+          <span class="pick-option-name" data-i18n="theme.night">Night</span>
+          <span class="pick-option-preview" data-i18n="theme.night.desc">Neutral dark</span>
         </span>
         <svg class="icon pick-option-check" aria-hidden="true"><use href="#i-check"></use></svg>
       </label>
@@ -267,4 +275,5 @@ description: Ruang menulis tanpa gangguan, dengan mode fokus per kalimat atau pa
   </div>
 </dialog>
 
+<script src="{{ '/zen-write/i18n.js' | relative_url }}"></script>
 <script src="{{ '/zen-write/main.js' | relative_url }}" defer></script>

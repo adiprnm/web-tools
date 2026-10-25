@@ -20,7 +20,6 @@
   var MIGRATED_KEY = "zen-write:migrasi:v1";
   var LEGACY_KEYS = ["zen-write:v1", "tulis-tenang:v1"];
   var MAX_ROWS = 300;
-  var MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
   var WORDS_PER_MINUTE = 200;
   var TOOLBAR_HIDE_DELAY = 2800;
   var TOOLBAR_HINT_DELAY = 2000;
@@ -45,14 +44,36 @@
   var isFirefoxMobile = /Firefox|FxiOS/i.test(navigator.userAgent) && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   var canHover = !!(window.matchMedia && window.matchMedia("(hover: hover)").matches);
 
-  var sentenceSegmenter = null;
-  try {
-    if (typeof Intl !== "undefined" && Intl.Segmenter) {
-      sentenceSegmenter = new Intl.Segmenter("id", { granularity: "sentence" });
-    }
-  } catch (error) {
-    sentenceSegmenter = null;
+  var i18n = window.ZenWriteI18n || null;
+
+  function t(key, vars) {
+    return i18n ? i18n.t(key, vars) : key;
   }
+
+  function tn(key, count, vars) {
+    return i18n ? i18n.plural(key, count, vars) : key;
+  }
+
+  function activeLang() {
+    return i18n ? i18n.lang() : "en";
+  }
+
+  // Pemecah kalimat mengikuti bahasa aktif: aturan tanda baca dan
+  // singkatan berbeda antara Inggris dan Indonesia.
+  var sentenceSegmenter = null;
+
+  function setSentenceLanguage(lang) {
+    sentenceSegmenter = null;
+    try {
+      if (typeof Intl !== "undefined" && Intl.Segmenter) {
+        sentenceSegmenter = new Intl.Segmenter(lang, { granularity: "sentence" });
+      }
+    } catch (error) {
+      sentenceSegmenter = null;
+    }
+  }
+
+  setSentenceLanguage(activeLang());
 
   document.addEventListener("DOMContentLoaded", function () {
     var area = document.getElementById("writing-area");
@@ -75,6 +96,9 @@
     var fontButton = document.getElementById("writing-font-button");
     var fontDialog = document.getElementById("writing-font-dialog");
     var fontCloseButton = document.getElementById("writing-font-close");
+    var langButton = document.getElementById("writing-lang");
+    var langCodeEl = document.getElementById("writing-lang-code");
+    var donateLink = document.getElementById("writing-donate");
     var notesPanel = document.getElementById("writing-notes");
     var notesScrim = document.getElementById("writing-notes-scrim");
     var notesList = document.getElementById("writing-notes-list");
@@ -93,6 +117,7 @@
     var fontChoices = Array.prototype.slice.call(document.querySelectorAll('input[name="writing-font"]'));
 
     var state = { focus: "off", font: "sans" };
+    var lastSavedKey = "ready";
     var saveTimer = null;
     var savingHoldTimer = null;
     var renderFrame = null;
@@ -109,14 +134,14 @@
     }
 
     var SAVED_STATES = {
-      ready: { label: "Siap" },
-      saving: { label: "Menyimpan", icon: "i-spinner" },
-      saved: { label: "Tersimpan", icon: "i-check" },
-      restored: { label: "Draf dipulihkan", icon: "i-check" },
-      created: { label: "Catatan baru", icon: "i-check" },
-      titled: { label: "Judul disimpan", icon: "i-check" },
-      failed: { label: "Tidak bisa menyimpan", tone: "error" },
-      unavailable: { label: "Penyimpanan tidak tersedia", tone: "error" }
+      ready: { label: "saved.ready" },
+      saving: { label: "saved.saving", icon: "i-spinner" },
+      saved: { label: "saved.saved", icon: "i-check" },
+      restored: { label: "saved.restored", icon: "i-check" },
+      created: { label: "saved.created", icon: "i-check" },
+      titled: { label: "saved.titled", icon: "i-check" },
+      failed: { label: "saved.failed", tone: "error" },
+      unavailable: { label: "saved.unavailable", tone: "error" }
     };
 
     // Status simpan tampil sebagai ikon supaya baris statistik tetap sunyi;
@@ -124,10 +149,12 @@
     function setSaved(state) {
       var key = SAVED_STATES[state] ? state : "ready";
       var spec = SAVED_STATES[key];
+      var label = t(spec.label);
 
+      lastSavedKey = key;
       savedEl.textContent = "";
       savedEl.dataset.state = key;
-      savedEl.title = spec.label;
+      savedEl.title = label;
 
       if (spec.tone) savedEl.dataset.tone = spec.tone;
       else delete savedEl.dataset.tone;
@@ -145,7 +172,7 @@
 
       var text = document.createElement("span");
       text.className = spec.icon ? "visually-hidden" : "writing-saved-text";
-      text.textContent = spec.label;
+      text.textContent = label;
       savedEl.appendChild(text);
     }
 
@@ -430,7 +457,7 @@
     function docTitle(doc) {
       var manual = String(doc.title || "").trim();
       var text = manual || firstLine(doc.body);
-      if (!text) return "Tanpa judul";
+      if (!text) return t("doc.untitled");
       return text.length > 90 ? text.slice(0, 90).trim() + "…" : text;
     }
 
@@ -464,21 +491,22 @@
       var value = Number(timestamp) || now;
       var diff = now - value;
 
-      if (diff < 45000) return "baru saja";
-      if (diff < 3600000) return Math.max(1, Math.round(diff / 60000)) + " mnt lalu";
-      if (diff < 86400000) return Math.round(diff / 3600000) + " jm lalu";
-      if (diff < 604800000) return Math.round(diff / 86400000) + " hr lalu";
+      if (diff < 45000) return t("time.now");
+      if (diff < 3600000) return t("time.minutes", { n: Math.max(1, Math.round(diff / 60000)) });
+      if (diff < 86400000) return t("time.hours", { n: Math.round(diff / 3600000) });
+      if (diff < 604800000) return t("time.days", { n: Math.round(diff / 86400000) });
 
       var date = new Date(value);
-      var label = date.getDate() + " " + MONTHS_SHORT[date.getMonth()];
+      var months = i18n ? i18n.months() : [];
+      var label = date.getDate() + " " + (months[date.getMonth()] || "");
       if (date.getFullYear() !== new Date(now).getFullYear()) label += " " + date.getFullYear();
       return label;
     }
 
     function metaText(doc) {
-      var words = countWords(doc.body) + " kata";
-      if (doc.deletedAt) return words + " · dihapus " + relativeTime(doc.deletedAt);
-      return words + " · " + relativeTime(doc.updatedAt);
+      var label = tn("meta.words", countWords(doc.body));
+      if (doc.deletedAt) return label + t("meta.deleted", { time: relativeTime(doc.deletedAt) });
+      return label + " · " + relativeTime(doc.updatedAt);
     }
 
     /* Semua tulisan masuk ke satu antrean supaya perubahan yang
@@ -621,7 +649,7 @@
       }
 
       renderPanel();
-      toast("Catatan dipindah ke sampah.");
+      toast(t("toast.movedToTrash"));
     }
 
     function restoreDoc(doc) {
@@ -629,11 +657,11 @@
       doc.updatedAt = Date.now();
       enqueueWrite(doc);
       renderPanel();
-      toast("Catatan dipulihkan.");
+      toast(t("toast.restored"));
     }
 
     function purgeDoc(doc) {
-      if (!window.confirm("Hapus catatan ini permanen? Tindakan ini tidak bisa dibatalkan.")) return;
+      if (!window.confirm(t("confirm.purge"))) return;
 
       docs = docs.filter(function (item) { return item.id !== doc.id; });
       writeChain = writeChain
@@ -648,15 +676,14 @@
       }
 
       renderPanel();
-      toast("Catatan dihapus permanen.");
+      toast(t("toast.purged"));
     }
 
     function emptyTrash() {
       var trashed = docs.filter(function (doc) { return !!doc.deletedAt; });
       if (!trashed.length) return;
 
-      var message = "Kosongkan sampah? " + trashed.length + " catatan akan dihapus permanen.";
-      if (!window.confirm(message)) return;
+      if (!window.confirm(tn("confirm.emptyTrash", trashed.length))) return;
 
       docs = docs.filter(function (doc) { return !doc.deletedAt; });
       trashed.forEach(function (doc) {
@@ -668,14 +695,14 @@
       });
 
       renderPanel();
-      toast("Sampah dikosongkan.");
+      toast(t("toast.trashEmptied"));
     }
 
     function togglePin(doc) {
       doc.pinned = !doc.pinned;
       enqueueWrite(doc);
       renderPanel();
-      toast(doc.pinned ? "Catatan disematkan." : "Sematan dilepas.");
+      toast(doc.pinned ? t("toast.pinned") : t("toast.unpinned"));
     }
 
     function beginRename(row, doc) {
@@ -691,7 +718,7 @@
       input.className = "note-rename";
       input.maxLength = 120;
       input.value = String(doc.title || "").trim() || firstLine(doc.body);
-      input.setAttribute("aria-label", "Judul catatan");
+      input.setAttribute("aria-label", t("notes.renameLabel"));
       titleEl.replaceWith(input);
       input.focus();
       input.select();
@@ -792,17 +819,17 @@
       tools.className = "note-tools";
 
       if (trashed) {
-        tools.appendChild(noteTool("restore", "#i-arrow-left", "Pulihkan"));
-        tools.appendChild(noteTool("purge", "#i-trash", "Hapus permanen"));
+        tools.appendChild(noteTool("restore", "#i-arrow-left", t("note.restore")));
+        tools.appendChild(noteTool("purge", "#i-trash", t("note.purge")));
         return tools;
       }
 
-      var pin = noteTool("pin", "#i-bookmark", doc.pinned ? "Lepas sematan" : "Sematkan");
+      var pin = noteTool("pin", "#i-bookmark", doc.pinned ? t("note.unpin") : t("note.pin"));
       if (doc.pinned) pin.classList.add("is-on");
       pin.setAttribute("aria-pressed", String(!!doc.pinned));
       tools.appendChild(pin);
-      tools.appendChild(noteTool("rename", "#i-pencil", "Ubah judul"));
-      tools.appendChild(noteTool("delete", "#i-trash", "Pindahkan ke sampah"));
+      tools.appendChild(noteTool("rename", "#i-pencil", t("note.rename")));
+      tools.appendChild(noteTool("delete", "#i-trash", t("note.delete")));
       return tools;
     }
 
@@ -860,7 +887,7 @@
       if (rows.length > MAX_ROWS) {
         var moreRow = document.createElement("li");
         moreRow.className = "notes-empty";
-        moreRow.textContent = "Menampilkan " + MAX_ROWS + " dari " + rows.length + " catatan. Persempit pencarian untuk melihat sisanya.";
+        moreRow.textContent = t("notes.more", { shown: MAX_ROWS, total: rows.length });
         notesList.appendChild(moreRow);
       }
 
@@ -871,12 +898,12 @@
         clearButton.type = "button";
         clearButton.className = "notes-clear";
         clearButton.setAttribute("data-act", "empty-trash");
-        clearButton.textContent = "Kosongkan sampah";
+        clearButton.textContent = t("notes.clearTrash");
         clearRow.appendChild(clearButton);
         notesList.appendChild(clearRow);
       }
 
-      if (notesHeading) notesHeading.textContent = showingTrash ? "Sampah" : "Catatan";
+      if (notesHeading) notesHeading.textContent = showingTrash ? t("notes.titleTrash") : t("notes.title");
       if (notesCount) notesCount.textContent = String(total);
       if (notesTrashButton) notesTrashButton.setAttribute("aria-pressed", String(showingTrash));
       if (notesNew) notesNew.hidden = showingTrash;
@@ -885,10 +912,10 @@
         notesEmpty.hidden = rows.length > 0;
         if (!rows.length) {
           notesEmpty.textContent = showingTrash
-            ? "Sampah kosong."
+            ? t("notes.emptyTrash")
             : notesSearch && notesSearch.value.trim()
-              ? "Tidak ada catatan yang cocok."
-              : "Belum ada catatan. Mulai menulis — semuanya tersimpan otomatis.";
+              ? t("notes.emptySearch")
+              : t("notes.emptyAll");
         }
       }
     }
@@ -969,12 +996,12 @@
         settings: { font: state.font, focus: state.focus },
         documents: docs.filter(function (doc) { return !doc.deletedAt; }).map(cloneDoc)
       };
-      var name = "zen-write-catatan-"
+      var name = t("file.exportPrefix")
         + stamp.getFullYear() + "-" + pad2(stamp.getMonth() + 1) + "-" + pad2(stamp.getDate())
         + ".json";
 
       downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }), name);
-      toast("Catatan diekspor.");
+      toast(t("toast.exported"));
     }
 
     function importFile(file) {
@@ -995,7 +1022,7 @@
           : Array.isArray(payload) ? payload : null;
 
         if (!rows) {
-          toast("Berkas tidak dikenali.");
+          toast(t("toast.importUnknown"));
           return;
         }
 
@@ -1013,7 +1040,7 @@
         });
 
         if (!imported) {
-          toast("Tidak ada catatan untuk diimpor.");
+          toast(t("toast.importEmpty"));
           return;
         }
 
@@ -1022,10 +1049,10 @@
         }
 
         renderPanel();
-        toast(imported + " catatan diimpor.");
+        toast(tn("toast.imported", imported));
       };
 
-      reader.onerror = function () { toast("Gagal membaca berkas."); };
+      reader.onerror = function () { toast(t("toast.importRead")); };
       reader.readAsText(file);
     }
 
@@ -1110,6 +1137,7 @@
     function boot() {
       var settings = readSettings();
 
+      syncLanguage();
       state.focus = FOCUS_MODES.indexOf(settings.focus) >= 0 ? settings.focus : "off";
       state.font = FONT_MODES.indexOf(settings.font) >= 0 ? settings.font : "sans";
       syncFocusButtons();
@@ -1129,7 +1157,7 @@
           openDoc(restored || createDoc(""), { silent: true, skipFlush: true });
 
           if (store && store.mode === "localstorage") {
-            toast("IndexedDB tidak tersedia; catatan disimpan di localStorage.");
+            toast(t("toast.indexeddb"));
           }
 
           requestPersistence();
@@ -1137,7 +1165,7 @@
         .catch(function () {
           openDoc(createDoc(""), { silent: true, skipFlush: true });
           setSaved("unavailable");
-          toast("Penyimpanan browser tidak tersedia; tulisan hanya bertahan selama tab terbuka.");
+          toast(t("toast.noStorage"));
         });
     }
 
@@ -1811,12 +1839,25 @@
       }, typeof delay === "number" ? delay : TOOLBAR_HIDE_DELAY);
     }
 
+    function toolbarTriggerLabel() {
+      return isToolbarRevealed() ? t("toolbar.hide") : t("toolbar.show");
+    }
+
+    // Dipakai saat bahasa berganti: label saja, tanpa menyentuh timer
+    // sembunyi-sendiri milik bilah alat.
+    function syncToolbarLabel() {
+      if (!toolbarTrigger) return;
+      var label = toolbarTriggerLabel();
+      toolbarTrigger.setAttribute("aria-label", label);
+      toolbarTrigger.setAttribute("title", label);
+    }
+
     function setToolbarRevealed(revealed, hideDelay) {
       var next = Boolean(revealed) && isZenActive();
 
       document.body.classList.toggle("is-toolbar-revealed", next);
       if (toolbarTrigger) {
-        var label = next ? "Sembunyikan alat tulis" : "Tampilkan alat tulis";
+        var label = toolbarTriggerLabel();
 
         toolbarTrigger.setAttribute("aria-expanded", String(next));
         toolbarTrigger.setAttribute("aria-label", label);
@@ -1952,7 +1993,7 @@
       });
 
       if (fontButton) {
-        var label = "Jenis huruf: " + (FONT_LABELS[state.font] || FONT_LABELS.sans);
+        var label = t("font.current", { name: FONT_LABELS[state.font] || FONT_LABELS.sans });
         fontButton.setAttribute("aria-label", label);
         fontButton.setAttribute("title", label);
       }
@@ -2033,10 +2074,66 @@
       saveSettings({ focus: state.focus });
     }
 
+    /* Bahasa
+       ----------------------------------------------------------
+       i18n.js sudah memilih dan menerapkan bahasa sebelum skrip ini
+       berjalan (supaya tidak ada kedipan teks). Di sini hanya label
+       yang dibuat dinamis yang perlu diselaraskan: tombol bilah alat,
+       status simpan, nama huruf, dan pemecah kalimat. */
+
+    function syncLangButton() {
+      if (!langButton) return;
+
+      var code = activeLang();
+      var label = t("lang.toggle");
+
+      if (langCodeEl) langCodeEl.textContent = code.toUpperCase();
+      langButton.setAttribute("aria-label", label);
+      langButton.setAttribute("title", label);
+    }
+
+    // Tautan traktir mengikuti bahasa antarmuka: pembaca Indonesia ke
+    // halaman Traktir, pembaca lain ke Buy Me a Coffee.
+    function syncDonateLink() {
+      if (!donateLink) return;
+
+      var href = donateLink.getAttribute(activeLang() === "id" ? "data-donate-id" : "data-donate-en");
+      if (href) donateLink.setAttribute("href", href);
+    }
+
+    function syncLanguage() {
+      setSentenceLanguage(activeLang());
+      area.setAttribute("lang", activeLang());
+      syncLangButton();
+      syncDonateLink();
+      syncToolbarLabel();
+      updateFullscreenButton();
+      syncFontChoices();
+      setSaved(lastSavedKey);
+    }
+
+    function applyLanguage(code) {
+      if (!i18n) return;
+
+      i18n.setLang(code);
+      syncLanguage();
+      renderPanel();
+      saveSettings({ lang: activeLang() });
+
+      // Tombol bahasa tinggal di panel catatan: jangan tarik fokus kembali
+      // ke area tulis selagi panel masih terbuka.
+      if (!isPanelOpen()) {
+        area.focus({ preventScroll: true });
+        kickCaret();
+        grow();
+        scheduleRender();
+      }
+    }
+
     function copy() {
       var text = area.value;
       if (!text.trim()) {
-        toast("Belum ada tulisan untuk disalin.");
+        toast(t("toast.copyEmpty"));
         return;
       }
 
@@ -2050,11 +2147,11 @@
     function download() {
       var text = area.value;
       if (!text.trim()) {
-        toast("Belum ada tulisan untuk diunduh.");
+        toast(t("toast.downloadEmpty"));
         return;
       }
 
-      var name = (current ? docTitle(current) : "tanpa-judul")
+      var name = (current ? docTitle(current) : t("file.untitled"))
         .trim()
         .slice(0, 60)
         .toLowerCase()
@@ -2062,8 +2159,8 @@
         .replace(/^-+|-+$/g, "");
 
       var blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
-      downloadBlob(blob, (name || "tanpa-judul") + ".md");
-      toast("Tulisan diunduh.");
+      downloadBlob(blob, (name || t("file.untitled")) + ".md");
+      toast(t("toast.downloaded"));
     }
 
     function startNew() {
@@ -2084,12 +2181,12 @@
       enqueueWrite(doc);
       openDoc(doc);
       setSaved("created");
-      toast("Catatan baru");
+      toast(t("toast.newNote"));
     }
 
     function updateFullscreenButton() {
       var active = isZenActive();
-      var label = active ? "Keluar layar penuh" : "Layar penuh";
+      var label = active ? t("fullscreen.exit") : t("fullscreen.enter");
       var iconUse = fullscreenButton.querySelector("use");
 
       fullscreenButton.setAttribute("aria-label", label);
@@ -2380,6 +2477,12 @@
 
     if (fontButton) fontButton.addEventListener("click", openFontDialog);
     if (fontCloseButton) fontCloseButton.addEventListener("click", closeFontDialog);
+
+    if (langButton) {
+      langButton.addEventListener("click", function () {
+        applyLanguage(activeLang() === "en" ? "id" : "en");
+      });
+    }
 
     if (fontDialog) {
       fontDialog.addEventListener("close", handleFontDialogClosed);

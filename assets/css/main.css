@@ -2695,10 +2695,47 @@ body.is-notes-open .notes-panel {
   border-color: var(--ink);
 }
 
+/* Kaki panel: satu baris tenang untuk setelan tingkat aplikasi (bahasa).
+   Kode bahasa di kanan supaya tombolnya bisa dikenali tanpa dibuka. */
+
+.notes-foot {
+  flex: 0 0 auto;
+  padding: 6px 8px calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line);
+}
+
+.notes-lang {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 8px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  text-align: left;
+}
+
+.notes-lang:hover {
+  color: var(--ink);
+  background: var(--surface-muted);
+}
+
+.notes-lang-code {
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .notes-body {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 0 8px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 0 8px 8px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
