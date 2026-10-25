@@ -24,6 +24,10 @@
   var TOOLBAR_HIDE_DELAY = 2800;
   var TOOLBAR_HINT_DELAY = 2000;
   var SCROLL_SETTLE_DELAY = 140;
+  var SWIPE_MIN_DISTANCE = 60;
+  var SWIPE_MAX_DURATION = 700;
+  var SWIPE_WHEEL_WINDOW = 260;
+  var SWIPE_WHEEL_DISTANCE = 90;
   var FOCUS_MODES = ["off", "sentence", "paragraph"];
   var FONT_MODES = [
     "sans", "inter", "sourcesans",
@@ -2536,6 +2540,104 @@
         closePanel();
       });
     }
+
+    /* Geser untuk membuka daftar catatan
+       ----------------------------------------------------------
+       Di mode fokus bilah alat kerap tersembunyi, jadi daftar catatan
+       dibuka dan ditutup dengan gestur: geser ke kanan membuka (panel
+       memang muncul dari kiri), geser ke kiri menutup. Hanya gerakan
+       mendatar yang cukup jauh yang dihitung, supaya gulir tegak dan
+       pemilihan teks tetap berjalan seperti biasa.
+       Layar sentuh memakai touch; papan sentuh memakai roda mendatar, dan
+       dengan natural scroll menggeser jari ke kanan memberi deltaX negatif. */
+
+    function isFocusView() {
+      return state.focus !== "off" || isZenActive();
+    }
+
+    // arah 1 = geser ke kanan (buka), -1 = geser ke kiri (tutup)
+    function swipeNotes(direction) {
+      if (direction > 0) {
+        if (!isPanelOpen()) openPanel();
+        return;
+      }
+      if (isPanelOpen()) closePanel();
+    }
+
+    var swipeStart = null;
+    var wheelSwipe = { x: 0, y: 0, time: 0 };
+
+    function startSwipe(event) {
+      swipeStart = null;
+      if (!isFocusView() || hasOpenDialog()) return;
+      if (event.touches.length !== 1) return;
+
+      var touch = event.touches[0];
+      swipeStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+    }
+
+    function moveSwipe(event) {
+      if (!swipeStart || event.touches.length !== 1) return;
+
+      var touch = event.touches[0];
+      var dx = touch.clientX - swipeStart.x;
+      var dy = touch.clientY - swipeStart.y;
+
+      if (Math.abs(dx) < 12) return;
+      if (Math.abs(dx) < Math.abs(dy) * 1.2) return;
+
+      // Geser mendatar tidak boleh diteruskan ke browser: di Chrome gestur
+      // ini bisa menjadi gulir ke samping atau tombol kembali. Setelah
+      // tekanan lama (memilih teks) biarkan gerakan berjalan seperti biasa.
+      if (Date.now() - swipeStart.time > 250) return;
+      if (event.cancelable) event.preventDefault();
+    }
+
+    function endSwipe(event) {
+      var start = swipeStart;
+      swipeStart = null;
+      if (!start) return;
+
+      var touch = event.changedTouches && event.changedTouches[0];
+      if (!touch) return;
+
+      var dx = touch.clientX - start.x;
+      var dy = touch.clientY - start.y;
+
+      // Tekan lama lalu menggeser berarti memilih teks, bukan gestur.
+      if (Date.now() - start.time > SWIPE_MAX_DURATION) return;
+      if (Math.abs(dx) < SWIPE_MIN_DISTANCE) return;
+      if (Math.abs(dx) < Math.abs(dy) * 1.5) return;
+
+      swipeNotes(dx > 0 ? 1 : -1);
+    }
+
+    function onSwipeWheel(event) {
+      if (!isFocusView() || hasOpenDialog()) return;
+
+      var now = Date.now();
+      if (now - wheelSwipe.time > SWIPE_WHEEL_WINDOW) {
+        wheelSwipe.x = 0;
+        wheelSwipe.y = 0;
+      }
+      wheelSwipe.time = now;
+      wheelSwipe.x += event.deltaX;
+      wheelSwipe.y += event.deltaY;
+
+      if (Math.abs(wheelSwipe.x) < SWIPE_WHEEL_DISTANCE) return;
+      if (Math.abs(wheelSwipe.x) < Math.abs(wheelSwipe.y) * 2) return;
+
+      var direction = wheelSwipe.x < 0 ? 1 : -1;
+      wheelSwipe.x = 0;
+      wheelSwipe.y = 0;
+      swipeNotes(direction);
+    }
+
+    document.addEventListener("touchstart", startSwipe, { passive: true });
+    document.addEventListener("touchmove", moveSwipe, { passive: false });
+    document.addEventListener("touchend", endSwipe, { passive: true });
+    document.addEventListener("touchcancel", function () { swipeStart = null; }, { passive: true });
+    document.addEventListener("wheel", onSwipeWheel, { passive: true });
 
     if (notesImport && notesFile) {
       notesImport.addEventListener("click", function () {
