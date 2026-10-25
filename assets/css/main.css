@@ -2743,7 +2743,9 @@ body.is-notes-open .notes-panel {
 .notes-body {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 0 8px 8px;
+  /* Gutter yang sama dengan search box dan baris aksi di atasnya, supaya
+     tepi card jatuh sebaris dengan tepi kontrol. */
+  padding: 0 16px 8px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
