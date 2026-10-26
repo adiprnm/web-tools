@@ -36,6 +36,9 @@ description: A distraction-free writing room with sentence and paragraph focus m
         <svg class="icon" aria-hidden="true"><use href="#i-palette"></use></svg>
       </button>
       <div class="writing-actions" role="group" aria-label="Writing actions" data-i18n-aria-label="actions.group">
+        <button type="button" class="icon-btn writing-preview-toggle" id="writing-preview-toggle" aria-label="Preview markdown" aria-expanded="false" aria-controls="writing-preview" title="Preview markdown" data-i18n-aria-label="preview.open" data-i18n-title="preview.openTitle">
+          <svg class="icon" aria-hidden="true"><use href="#i-eye"></use></svg>
+        </button>
         <button type="button" class="icon-btn" id="writing-notes-toggle" aria-label="Notes list" aria-expanded="false" aria-controls="writing-notes" aria-keyshortcuts="Control+K Meta+K" title="Notes list (Ctrl+K)" data-i18n-aria-label="notes.open" data-i18n-title="notes.openTitle">
           <svg class="icon" aria-hidden="true"><use href="#i-notes"></use></svg>
         </button>
@@ -69,6 +72,10 @@ description: A distraction-free writing room with sentence and paragraph focus m
     <a class="writing-donate" id="writing-donate" href="{{ site.coffee_url }}" target="_blank" rel="noopener" data-donate-en="{{ site.coffee_url }}" data-donate-id="{{ site.donate_url }}" data-i18n="donate.link">Enjoying Zen Write? Buy me a coffee</a>
   </div>
 </div>
+
+<button type="button" class="writing-preview-trigger" id="writing-preview-trigger" aria-label="Preview markdown" aria-expanded="false" aria-controls="writing-preview" title="Preview markdown" data-i18n-aria-label="preview.open" data-i18n-title="preview.openTitle">
+  <svg class="icon" aria-hidden="true"><use href="#i-eye"></use></svg>
+</button>
 
 <button type="button" class="writing-notes-trigger" id="writing-notes-trigger" aria-label="Notes list" aria-expanded="false" aria-controls="writing-notes" title="Notes list (Ctrl+K)" data-i18n-aria-label="notes.open" data-i18n-title="notes.openTitle">
   <svg class="icon" aria-hidden="true"><use href="#i-notes"></use></svg>
@@ -122,6 +129,16 @@ description: A distraction-free writing room with sentence and paragraph focus m
 
   <input type="file" id="writing-notes-file" accept="application/json,.json" hidden>
 </aside>
+
+<dialog class="preview-dialog" id="writing-preview" aria-label="Preview markdown" data-i18n-aria-label="preview.open">
+  <button type="button" class="preview-edit" id="writing-preview-edit" aria-label="Back to writing" title="Back to writing" data-i18n-aria-label="preview.edit" data-i18n-title="preview.edit">
+    <svg class="icon" aria-hidden="true"><use href="#i-pencil"></use></svg>
+  </button>
+  <div class="preview-body" id="writing-preview-body" tabindex="-1">
+    <article class="preview-reading" id="writing-preview-content"></article>
+    <p class="preview-empty" id="writing-preview-empty" hidden data-i18n="preview.empty">Nothing to preview yet.</p>
+  </div>
+</dialog>
 
 <dialog class="pick-dialog" id="writing-font-dialog" aria-labelledby="writing-font-dialog-title">
   <div class="pick-dialog-head">

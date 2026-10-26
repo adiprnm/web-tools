@@ -118,6 +118,13 @@
     var notesImport = document.getElementById("writing-notes-import");
     var notesTrashButton = document.getElementById("writing-notes-trash");
     var notesFile = document.getElementById("writing-notes-file");
+    var previewDialog = document.getElementById("writing-preview");
+    var previewContent = document.getElementById("writing-preview-content");
+    var previewBody = document.getElementById("writing-preview-body");
+    var previewEmpty = document.getElementById("writing-preview-empty");
+    var previewTrigger = document.getElementById("writing-preview-trigger");
+    var previewToggle = document.getElementById("writing-preview-toggle");
+    var previewEdit = document.getElementById("writing-preview-edit");
     var fontChoices = Array.prototype.slice.call(document.querySelectorAll('input[name="writing-font"]'));
 
     var state = { focus: "off", font: "sans" };
@@ -1816,6 +1823,538 @@
       appendText(text.slice(range[1]), "writing-dim");
     }
 
+    /* Markdown preview
+       ----------------------------------------------------------
+       A small renderer kept in-house so the preview needs no network
+       dependency. Text is escaped before any markup is added and links
+       only accept safe schemes, so pasted HTML cannot run. */
+
+    var MD_ESCAPABLE = "\\`*_{}[]()#+-.!>~|";
+
+    function mdEscape(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function mdSafeUrl(url, image) {
+      var value = String(url || "").trim();
+
+      if (!value) return "";
+      if (image && /^data:image\//i.test(value)) return value;
+      if (/^(https?:|mailto:|tel:)/i.test(value)) return value;
+      // Any other scheme (javascript:, vbscript:, data: for links) is dropped.
+      if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return "";
+      return value;
+    }
+
+    function mdPlainText(text) {
+      return String(text).replace(/[*_~+`\\]/g, "");
+    }
+
+    function mdFindCodeSpan(text, start) {
+      var end = text.indexOf("`", start + 1);
+      if (end === -1 || end === start + 1) return null;
+      return { content: text.slice(start + 1, end), end: end + 1 };
+    }
+
+    function mdFindLink(text, start) {
+      // start points at the opening bracket of [label](target).
+      var depth = 0;
+      var index = start;
+
+      for (; index < text.length; index += 1) {
+        var char = text.charAt(index);
+
+        if (char === "\\") {
+          index += 1;
+          continue;
+        }
+
+        if (char === "[") {
+          depth += 1;
+        } else if (char === "]") {
+          depth -= 1;
+          if (depth === 0) break;
+        }
+      }
+
+      if (depth !== 0 || text.charAt(index + 1) !== "(") return null;
+
+      var close = text.indexOf(")", index + 2);
+      if (close === -1) return null;
+
+      var target = text.slice(index + 2, close).trim();
+      var title = "";
+      var titled = /^(\S+)(?:\s+["'(](.*)["')])?$/.exec(target);
+
+      if (titled) {
+        target = titled[1];
+        title = titled[2] || "";
+      }
+
+      return {
+        label: text.slice(start + 1, index),
+        target: target,
+        title: title,
+        end: close + 1
+      };
+    }
+
+    var MD_EMPHASIS = [
+      { marker: "***", open: "<strong><em>", close: "</em></strong>" },
+      { marker: "___", open: "<strong><em>", close: "</em></strong>" },
+      { marker: "**", open: "<strong>", close: "</strong>" },
+      { marker: "__", open: "<strong>", close: "</strong>" },
+      { marker: "~~", open: "<del>", close: "</del>" },
+      { marker: "++", open: "<ins>", close: "</ins>" },
+      { marker: "*", open: "<em>", close: "</em>" },
+      { marker: "_", open: "<em>", close: "</em>" }
+    ];
+
+    function mdMatchEmphasis(text, start) {
+      for (var i = 0; i < MD_EMPHASIS.length; i += 1) {
+        var spec = MD_EMPHASIS[i];
+        var marker = spec.marker;
+
+        if (text.slice(start, start + marker.length) !== marker) continue;
+
+        var before = start > 0 ? text.charAt(start - 1) : "";
+        var after = text.charAt(start + marker.length);
+
+        // The opening marker needs text after it, and underscores do not
+        // open inside a word (snake_case stays literal).
+        if (after === "" || /\s/.test(after)) continue;
+        if (marker.charAt(0) === "_" && /[A-Za-z0-9]/.test(before)) continue;
+
+        var close = text.indexOf(marker, start + marker.length + 1);
+        if (close === -1) continue;
+        if (/\s/.test(text.charAt(close - 1))) continue;
+        if (marker.charAt(0) === "_" && /[A-Za-z0-9]/.test(text.charAt(close + marker.length))) continue;
+
+        return {
+          content: text.slice(start + marker.length, close),
+          open: spec.open,
+          close: spec.close,
+          end: close + marker.length
+        };
+      }
+
+      return null;
+    }
+
+    function mdInline(text) {
+      var out = "";
+      var index = 0;
+      var plainStart = 0;
+
+      function flush(end) {
+        if (end > plainStart) out += mdEscape(text.slice(plainStart, end));
+      }
+
+      while (index < text.length) {
+        var char = text.charAt(index);
+
+        if (char === "\\" && MD_ESCAPABLE.indexOf(text.charAt(index + 1)) !== -1) {
+          flush(index);
+          out += mdEscape(text.charAt(index + 1));
+          index += 2;
+          plainStart = index;
+          continue;
+        }
+
+        if (char === "`") {
+          var code = mdFindCodeSpan(text, index);
+
+          if (code) {
+            flush(index);
+            out += "<code>" + mdEscape(code.content) + "</code>";
+            index = code.end;
+            plainStart = index;
+            continue;
+          }
+        }
+
+        if (char === "!" && text.charAt(index + 1) === "[") {
+          var image = mdFindLink(text, index + 1);
+          var imageUrl = image ? mdSafeUrl(image.target, true) : "";
+
+          if (imageUrl) {
+            flush(index);
+            out += '<img src="' + mdEscape(imageUrl) + '" alt="' + mdEscape(mdPlainText(image.label)) + '"'
+              + (image.title ? ' title="' + mdEscape(image.title) + '"' : "")
+              + ' loading="lazy">';
+            index = image.end;
+            plainStart = index;
+            continue;
+          }
+        }
+
+        if (char === "[") {
+          var link = mdFindLink(text, index);
+          var linkUrl = link ? mdSafeUrl(link.target, false) : "";
+
+          if (linkUrl) {
+            var external = /^(https?:)?\/\//i.test(linkUrl) || /^mailto:/i.test(linkUrl);
+
+            flush(index);
+            out += '<a href="' + mdEscape(linkUrl) + '"'
+              + (link.title ? ' title="' + mdEscape(link.title) + '"' : "")
+              + (external ? ' target="_blank" rel="noopener noreferrer"' : "")
+              + ">" + mdInline(link.label) + "</a>";
+            index = link.end;
+            plainStart = index;
+            continue;
+          }
+        }
+
+        var emphasis = mdMatchEmphasis(text, index);
+
+        if (emphasis) {
+          flush(index);
+          out += emphasis.open + mdInline(emphasis.content) + emphasis.close;
+          index = emphasis.end;
+          plainStart = index;
+          continue;
+        }
+
+        index += 1;
+      }
+
+      flush(text.length);
+      return out;
+    }
+
+    var MD_HEADING = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/;
+    var MD_HR = /^\s{0,3}(?:(?:\*\s*){3,}|(?:-\s*){3,}|(?:_\s*){3,})$/;
+    var MD_FENCE = /^\s{0,3}(`{3,}|~{3,})\s*(.*?)\s*$/;
+    var MD_QUOTE = /^\s{0,3}>/;
+    var MD_LIST = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
+    var MD_TASK = /^\[([ xX])\]\s+(.*)$/;
+
+    function mdIsBlank(line) {
+      return /^\s*$/.test(line);
+    }
+
+    function mdIsTableSeparator(line) {
+      return /^\s*\|?\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(line);
+    }
+
+    function mdSplitRow(line) {
+      var row = line.trim();
+      var cells = [];
+      var current = "";
+
+      if (row.charAt(0) === "|") row = row.slice(1);
+      if (row.charAt(row.length - 1) === "|") row = row.slice(0, -1);
+
+      for (var i = 0; i < row.length; i += 1) {
+        var char = row.charAt(i);
+
+        if (char === "\\" && row.charAt(i + 1) === "|") {
+          current += "|";
+          i += 1;
+          continue;
+        }
+
+        if (char === "|") {
+          cells.push(current.trim());
+          current = "";
+          continue;
+        }
+
+        current += char;
+      }
+
+      cells.push(current.trim());
+      return cells;
+    }
+
+    function mdAlignments(separator) {
+      return mdSplitRow(separator).map(function (cell) {
+        var left = cell.charAt(0) === ":";
+        var right = cell.charAt(cell.length - 1) === ":";
+
+        if (left && right) return "center";
+        if (right) return "right";
+        if (left) return "left";
+        return "";
+      });
+    }
+
+    function mdTable(lines, start) {
+      var header = mdSplitRow(lines[start]);
+      var aligns = mdAlignments(lines[start + 1]);
+      var index = start + 2;
+      var html = "<table><thead><tr>";
+
+      function cell(tag, text, column) {
+        var align = aligns[column] ? ' style="text-align:' + aligns[column] + '"' : "";
+        return "<" + tag + align + ">" + mdInline(text) + "</" + tag + ">";
+      }
+
+      for (var c = 0; c < header.length; c += 1) html += cell("th", header[c], c);
+      html += "</tr></thead><tbody>";
+
+      while (index < lines.length && !mdIsBlank(lines[index]) && lines[index].indexOf("|") !== -1) {
+        var row = mdSplitRow(lines[index]);
+
+        html += "<tr>";
+        for (var r = 0; r < header.length; r += 1) {
+          html += cell("td", row[r] === undefined ? "" : row[r], r);
+        }
+        html += "</tr>";
+        index += 1;
+      }
+
+      html += "</tbody></table>";
+      return { html: html, end: index };
+    }
+
+    function mdFence(lines, start) {
+      var open = MD_FENCE.exec(lines[start]);
+      var marker = open[1];
+      var char = marker.charAt(0);
+      var minimum = marker.length;
+      var info = open[2] || "";
+      var body = [];
+      var index = start + 1;
+      var close = new RegExp("^\\s{0,3}" + (char === "`" ? "`" : "~") + "{" + minimum + ",}\\s*$");
+
+      while (index < lines.length) {
+        if (close.test(lines[index])) {
+          index += 1;
+          break;
+        }
+        body.push(lines[index]);
+        index += 1;
+      }
+
+      var language = info.split(/\s+/)[0].replace(/[^\w-]/g, "");
+      var className = language ? ' class="language-' + mdEscape(language) + '"' : "";
+
+      return {
+        html: "<pre><code" + className + ">" + mdEscape(body.join("\n")) + "</code></pre>",
+        end: index
+      };
+    }
+
+    function mdQuote(lines, start) {
+      var body = [];
+      var index = start;
+
+      while (index < lines.length && MD_QUOTE.test(lines[index])) {
+        body.push(lines[index].replace(/^\s{0,3}>\s?/, ""));
+        index += 1;
+      }
+
+      return { html: "<blockquote>" + mdBlocks(body) + "</blockquote>", end: index };
+    }
+
+    function mdList(lines, start) {
+      var first = MD_LIST.exec(lines[start]);
+      var ordered = /\d/.test(first[2]);
+      var baseIndent = first[1].length;
+      var startNumber = ordered ? parseInt(first[2], 10) : 1;
+      var items = [];
+      var lastItem = null;
+      var index = start;
+      var indentCut = new RegExp("^\\s{0," + baseIndent + "}");
+
+      while (index < lines.length) {
+        var match = MD_LIST.exec(lines[index]);
+
+        if (match && match[1].length === baseIndent && /\d/.test(match[2]) === ordered) {
+          lastItem = [match[3]];
+          items.push(lastItem);
+          index += 1;
+          continue;
+        }
+
+        // Continuation lines and nested lists belong to the current item.
+        if (lastItem && (mdIsBlank(lines[index]) || /^\s+/.test(lines[index]))) {
+          lastItem.push(lines[index].replace(indentCut, ""));
+          index += 1;
+          continue;
+        }
+
+        break;
+      }
+
+      var html = ordered
+        ? "<ol" + (startNumber !== 1 ? ' start="' + startNumber + '"' : "") + ">"
+        : "<ul>";
+
+      items.forEach(function (itemLines) {
+        var firstLine = itemLines[0];
+        var task = MD_TASK.exec(firstLine);
+        var prefix = "";
+
+        if (task) {
+          prefix = '<input type="checkbox" disabled' + (task[1].toLowerCase() === "x" ? " checked" : "") + ">";
+          firstLine = task[2];
+        }
+
+        html += '<li' + (task ? ' class="task"' : "") + ">" + prefix
+          + mdInline(firstLine) + mdBlocks(itemLines.slice(1)) + "</li>";
+      });
+
+      html += ordered ? "</ol>" : "</ul>";
+      return { html: html, end: index };
+    }
+
+    function mdStartsBlock(lines, index) {
+      var line = lines[index];
+
+      return MD_HEADING.test(line)
+        || MD_HR.test(line)
+        || MD_FENCE.test(line)
+        || MD_QUOTE.test(line)
+        || MD_LIST.test(line)
+        || (line.indexOf("|") !== -1 && index + 1 < lines.length && mdIsTableSeparator(lines[index + 1]));
+    }
+
+    function mdBlocks(lines) {
+      var html = "";
+      var index = 0;
+
+      while (index < lines.length) {
+        var line = lines[index];
+
+        if (mdIsBlank(line)) {
+          index += 1;
+          continue;
+        }
+
+        var fence = MD_FENCE.exec(line);
+        if (fence) {
+          var code = mdFence(lines, index);
+          html += code.html;
+          index = code.end;
+          continue;
+        }
+
+        var heading = MD_HEADING.exec(line);
+        if (heading) {
+          var level = heading[1].length;
+          html += "<h" + level + ">" + mdInline(heading[2]) + "</h" + level + ">";
+          index += 1;
+          continue;
+        }
+
+        if (MD_HR.test(line)) {
+          html += "<hr>";
+          index += 1;
+          continue;
+        }
+
+        if (MD_QUOTE.test(line)) {
+          var quote = mdQuote(lines, index);
+          html += quote.html;
+          index = quote.end;
+          continue;
+        }
+
+        if (line.indexOf("|") !== -1 && index + 1 < lines.length && mdIsTableSeparator(lines[index + 1])) {
+          var table = mdTable(lines, index);
+          html += table.html;
+          index = table.end;
+          continue;
+        }
+
+        if (MD_LIST.test(line)) {
+          var list = mdList(lines, index);
+          html += list.html;
+          index = list.end;
+          continue;
+        }
+
+        var paragraph = [line];
+        index += 1;
+
+        while (index < lines.length && !mdIsBlank(lines[index]) && !mdStartsBlock(lines, index)) {
+          paragraph.push(lines[index]);
+          index += 1;
+        }
+
+        html += "<p>" + paragraph.map(mdInline).join("<br>") + "</p>";
+      }
+
+      return html;
+    }
+
+    function renderMarkdown(text) {
+      var source = String(text || "").replace(/\r\n?/g, "\n");
+      if (!source.trim()) return "";
+      return mdBlocks(source.split("\n"));
+    }
+
+    function previewIsOpen() {
+      return !!previewDialog && (previewDialog.open || previewDialog.hasAttribute("open"));
+    }
+
+    function syncPreviewTriggers(open) {
+      [previewTrigger, previewToggle].forEach(function (button) {
+        if (button) button.setAttribute("aria-expanded", String(open));
+      });
+    }
+
+    function renderPreview() {
+      if (!previewContent) return;
+
+      var html = renderMarkdown(area.value);
+
+      previewContent.innerHTML = html;
+      previewContent.hidden = !html;
+      if (previewEmpty) previewEmpty.hidden = !!html;
+    }
+
+    function openPreview() {
+      if (!previewDialog) return;
+
+      window.clearTimeout(toolbarHideTimer);
+      toolbarHideTimer = null;
+      renderPreview();
+
+      if (typeof previewDialog.showModal === "function") {
+        if (!previewDialog.open) previewDialog.showModal();
+      } else {
+        previewDialog.setAttribute("open", "");
+      }
+
+      syncPreviewTriggers(true);
+      if (previewBody) {
+        // Focusing the scroll container puts the reading position at the top
+        // and lets Page Down work without reaching for the mouse.
+        previewBody.scrollTop = 0;
+        previewBody.focus({ preventScroll: true });
+      } else if (previewEdit) {
+        previewEdit.focus({ preventScroll: true });
+      }
+    }
+
+    function handlePreviewClosed() {
+      syncPreviewTriggers(false);
+      area.focus({ preventScroll: true });
+      kickCaret();
+      scheduleRender();
+      if (isToolbarRevealed()) armToolbarHide();
+    }
+
+    function closePreview() {
+      if (!previewDialog || !previewIsOpen()) return;
+
+      if (typeof previewDialog.close === "function") {
+        previewDialog.close();
+        return;
+      }
+
+      previewDialog.removeAttribute("open");
+      handlePreviewClosed();
+    }
+
     function isZenActive() {
       return document.body.classList.contains("is-zen") || document.body.classList.contains("is-zen-flow");
     }
@@ -2508,6 +3047,26 @@
     downloadButton.addEventListener("click", download);
     newButton.addEventListener("click", startNew);
 
+    /* Markdown preview
+       ---------------------------------------------------------- */
+
+    [previewTrigger, previewToggle].forEach(function (button) {
+      if (!button) return;
+      button.addEventListener("click", openPreview);
+    });
+
+    if (previewEdit) previewEdit.addEventListener("click", closePreview);
+
+    if (previewDialog) {
+      previewDialog.addEventListener("close", handlePreviewClosed);
+      previewDialog.addEventListener("cancel", function () {
+        syncPreviewTriggers(false);
+      });
+      previewDialog.addEventListener("click", function (event) {
+        if (event.target === previewDialog) closePreview();
+      });
+    }
+
     /* Daftar catatan
        ---------------------------------------------------------- */
 
@@ -2733,6 +3292,11 @@
           closeFontDialog();
           event.preventDefault();
         }
+        return;
+      }
+      if (previewIsOpen()) {
+        closePreview();
+        event.preventDefault();
         return;
       }
       if (hasOpenDialog()) return;

@@ -39,6 +39,11 @@
       "theme.button": "Appearance theme",
       "actions.group": "Writing actions",
 
+      "preview.open": "Preview markdown",
+      "preview.openTitle": "Preview markdown",
+      "preview.edit": "Back to writing",
+      "preview.empty": "Nothing to preview yet.",
+
       "editor.placeholder": "Start writing…",
       "editor.label": "Writing area",
       "stats.words": "words",
@@ -155,6 +160,11 @@
       "font.button": "Jenis huruf",
       "theme.button": "Tema tampilan",
       "actions.group": "Aksi tulisan",
+
+      "preview.open": "Pratinjau markdown",
+      "preview.openTitle": "Pratinjau markdown",
+      "preview.edit": "Kembali menulis",
+      "preview.empty": "Belum ada yang bisa dipratinjau.",
 
       "editor.placeholder": "Mulai menulis…",
       "editor.label": "Area tulisan",
