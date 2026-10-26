@@ -1,8 +1,10 @@
-var CACHE_NAME = "zen-write-v31";
+var CACHE_NAME = "zen-write-v32";
 var APP_SHELL = [
   "/zen-write/",
   "/zen-write/i18n.js",
   "/zen-write/main.js",
+  "/zen-write/sync.js",
+  "/assets/js/qrcode.js",
   "/zen-write/manifest.json",
   "/zen-write/icon.svg",
   "/zen-write/icon-180.png",
@@ -43,6 +45,14 @@ self.addEventListener("activate", function (event) {
 
 self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") return;
+
+  // API sync tidak boleh masuk cache: responsnya bergantung pada sesi dan
+  // cursor, dan service worker ini menyajikan GET same-origin dari cache.
+  var requestUrl = new URL(event.request.url);
+  if (requestUrl.origin === self.location.origin &&
+      (requestUrl.pathname === "/zen-write/api" || requestUrl.pathname.indexOf("/zen-write/api/") === 0)) {
+    return;
+  }
 
   if (event.request.mode === "navigate") {
     event.respondWith(

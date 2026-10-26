@@ -118,6 +118,27 @@
     var notesImport = document.getElementById("writing-notes-import");
     var notesTrashButton = document.getElementById("writing-notes-trash");
     var notesFile = document.getElementById("writing-notes-file");
+    var syncButton = document.getElementById("writing-notes-sync");
+    var syncDialog = document.getElementById("writing-sync");
+    var syncClose = document.getElementById("writing-sync-close");
+    var syncRequestForm = document.getElementById("writing-sync-request-form");
+    var syncContact = document.getElementById("writing-sync-contact");
+    var syncNoteField = document.getElementById("writing-sync-note");
+    var syncWebsite = document.getElementById("writing-sync-website");
+    var syncRequestError = document.getElementById("writing-sync-request-error");
+    var syncRequestStatus = document.getElementById("writing-sync-request-status");
+    var syncClaimForm = document.getElementById("writing-sync-claim-form");
+    var syncClaimCode = document.getElementById("writing-sync-code");
+    var syncClaimError = document.getElementById("writing-sync-claim-error");
+    var syncRecoveryEl = document.getElementById("writing-sync-recovery");
+    var syncStatusEl = document.getElementById("writing-sync-status");
+    var syncStatusDot = document.getElementById("writing-sync-dot");
+    var syncErrorEl = document.getElementById("writing-sync-error");
+    var syncDevicesEl = document.getElementById("writing-sync-devices");
+    var syncPairBox = document.getElementById("writing-sync-pair-box");
+    var syncQrEl = document.getElementById("writing-sync-qr");
+    var syncPairCodeEl = document.getElementById("writing-sync-pair-code");
+    var syncRevealKeyEl = document.getElementById("writing-sync-reveal-key");
     var previewDialog = document.getElementById("writing-preview");
     var previewContent = document.getElementById("writing-preview-content");
     var previewBody = document.getElementById("writing-preview-body");
@@ -524,6 +545,8 @@
        datang beruntun tidak saling menimpa di IndexedDB. */
 
     function enqueueWrite(doc) {
+      markSyncDirty(doc);
+
       var snapshot = cloneDoc(doc);
       var seq = ++writeSeq;
       var shownAt;
@@ -674,6 +697,7 @@
     function purgeDoc(doc) {
       if (!window.confirm(t("confirm.purge"))) return;
 
+      delete syncDirty[doc.id];
       docs = docs.filter(function (item) { return item.id !== doc.id; });
       writeChain = writeChain
         .then(function () {
@@ -698,6 +722,7 @@
 
       docs = docs.filter(function (doc) { return !doc.deletedAt; });
       trashed.forEach(function (doc) {
+        delete syncDirty[doc.id];
         writeChain = writeChain
           .then(function () {
             return ensureStore().then(function (activeStore) { return activeStore.remove(doc.id); });
@@ -1145,6 +1170,570 @@
         .catch(function () {});
     }
 
+
+    /* Sync dan cadangan
+       ------------------------------------------------------------
+       Server hanya menyimpan ciphertext. Kunci enkripsi diturunkan
+       dari recoveryKey di perangkat dan tidak pernah dikirim.
+       ---------------------------------------------------------- */
+
+    var Sync = window.ZenWriteSync || null;
+    var syncSession = Sync ? Sync.loadSession() : null;
+    var syncKey = null;
+    var syncDirty = {};
+    var syncRunning = false;
+    var syncApplying = false;
+    var syncTimer = null;
+    var syncStatus = "idle";
+    var syncView = "soon";
+    var syncPairUrl = "";
+
+    function syncReady() {
+      return !!(Sync && syncSession && syncSession.accountId && syncSession.encKey);
+    }
+
+    function syncToken() {
+      return syncSession ? syncSession.deviceToken : null;
+    }
+
+    function saveSyncSession() {
+      if (Sync && syncSession) Sync.saveSession(syncSession);
+    }
+
+    function syncDeviceLabel() {
+      return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? "Phone" : "Computer";
+    }
+
+    function markSyncDirty(doc) {
+      if (!syncReady() || syncApplying || !doc) return;
+      syncDirty[doc.id] = true;
+      scheduleSync(8000);
+    }
+
+    function scheduleSync(delay) {
+      if (!syncReady() || syncStatus === "expired") return;
+      window.clearTimeout(syncTimer);
+      syncTimer = window.setTimeout(function () {
+        syncTimer = null;
+        syncNow();
+      }, delay || 60000);
+    }
+
+    function setSyncView(view) {
+      syncView = view;
+      if (!syncDialog) return;
+
+      var sections = syncDialog.querySelectorAll("[data-sync-view]");
+      Array.prototype.forEach.call(sections, function (section) {
+        section.hidden = section.getAttribute("data-sync-view") !== view;
+      });
+    }
+
+    var SYNC_STATUS_KEYS = {
+      idle: "sync.statusIdle",
+      syncing: "sync.statusSyncing",
+      offline: "sync.statusOffline",
+      error: "sync.statusError",
+      expired: "sync.statusExpired"
+    };
+
+    function setSyncStatus(status, message) {
+      syncStatus = status;
+      if (syncStatusDot) syncStatusDot.setAttribute("data-state", status);
+      if (syncStatusEl) syncStatusEl.textContent = t(SYNC_STATUS_KEYS[status] || "sync.statusIdle");
+      if (syncErrorEl) {
+        var text = message || "";
+        syncErrorEl.textContent = text;
+        syncErrorEl.hidden = !text;
+      }
+    }
+
+    function updateSyncStatusText() {
+      if (syncStatusEl) syncStatusEl.textContent = t(SYNC_STATUS_KEYS[syncStatus] || "sync.statusIdle");
+      if (syncStatus === "expired" && syncErrorEl) syncErrorEl.textContent = t("sync.errorExpired");
+      if (syncStatus === "error" && syncErrorEl) syncErrorEl.textContent = t("sync.errorGeneric");
+    }
+
+    async function ensureSyncKey() {
+      if (syncKey) return syncKey;
+      if (!syncSession || !syncSession.encKey) throw new Error("sync_no_key");
+      syncKey = await Sync.importEncKey(syncSession.encKey);
+      return syncKey;
+    }
+
+    function handleSyncError(error) {
+      if (error && error.code === "entitlement_required") {
+        setSyncStatus("expired", t("sync.errorExpired"));
+        return;
+      }
+      if (error && (error.status === 401 || error.code === "unauthenticated")) {
+        setSyncStatus("error", t("sync.errorAuth"));
+        return;
+      }
+      if (error && error.name === "TypeError") {
+        setSyncStatus("offline", "");
+        return;
+      }
+      setSyncStatus("error", t("sync.errorGeneric"));
+    }
+
+    async function syncNow(options) {
+      options = options || {};
+      if (!syncReady() || syncRunning || syncStatus === "expired") return;
+
+      commitCurrent();
+      syncRunning = true;
+      setSyncStatus("syncing");
+
+      try {
+        await syncPush();
+        await syncPull();
+        setSyncStatus("idle");
+        if (options.toast) toast(t("sync.toastSynced"));
+        renderPanel();
+      } catch (error) {
+        handleSyncError(error);
+      } finally {
+        syncRunning = false;
+        if (syncStatus !== "expired" && syncStatus !== "error") scheduleSync(60000);
+      }
+    }
+
+    async function syncPush() {
+      var key = await ensureSyncKey();
+      var pending = [];
+
+      Object.keys(syncDirty).forEach(function (id) {
+        var doc = findDoc(id);
+        if (!doc) {
+          delete syncDirty[id];
+          return;
+        }
+        if (isPristine(doc)) {
+          delete syncDirty[id];
+          return;
+        }
+        pending.push(doc);
+      });
+
+      for (var start = 0; start < pending.length; start += 40) {
+        var chunk = pending.slice(start, start + 40);
+        var payload = [];
+        var sentAt = {};
+
+        for (var i = 0; i < chunk.length; i += 1) {
+          var doc = chunk[i];
+          var baseRev = Number(syncSession.baseRevs[doc.id] || 0);
+          var encrypted = await Sync.encryptNote(key, {
+            id: doc.id,
+            rev: baseRev + 1,
+            title: doc.title,
+            body: doc.body
+          });
+
+          payload.push({
+            id: doc.id,
+            baseRev: baseRev,
+            updatedAt: doc.updatedAt,
+            deletedAt: doc.deletedAt || null,
+            iv: encrypted.iv,
+            ciphertext: encrypted.ciphertext
+          });
+          sentAt[doc.id] = doc.updatedAt;
+        }
+
+        var result = await Sync.api("/sync/push", {
+          method: "POST",
+          token: syncToken(),
+          body: { notes: payload }
+        });
+
+        result.applied.forEach(function (id) {
+          syncSession.baseRevs[id] = Number(syncSession.baseRevs[id] || 0) + 1;
+          var currentDoc = findDoc(id);
+          if (!currentDoc || sentAt[id] === currentDoc.updatedAt) delete syncDirty[id];
+          syncSession.lastSynced[id] = Date.now();
+        });
+
+        for (var c = 0; c < result.conflicts.length; c += 1) {
+          await applyServerNote(result.conflicts[c], true);
+        }
+
+        saveSyncSession();
+      }
+    }
+
+    async function syncPull() {
+      var key = await ensureSyncKey();
+      var since = Number(syncSession.cursor || 0);
+
+      for (var page = 0; page < 10; page += 1) {
+        var result = await Sync.api("/sync/pull?since=" + encodeURIComponent(since), {
+          token: syncToken()
+        });
+
+        for (var i = 0; i < result.notes.length; i += 1) {
+          await applyServerNote(result.notes[i], false, key);
+        }
+
+        since = result.cursor;
+        syncSession.cursor = since;
+        saveSyncSession();
+
+        if (!result.hasMore) break;
+      }
+
+      // Di perangkat baru, catatan pertama dari server harus menggantikan
+      // draf kosong yang terbuka saat aplikasi dimuat.
+      if (isPristine(current)) {
+        var newest = newestDoc();
+        if (newest) openDoc(newest, { silent: true, skipFlush: true });
+      }
+    }
+
+    async function decryptServerNote(serverNote, key) {
+      if (serverNote.deletedAt || !serverNote.ciphertext) return null;
+      try {
+        return await Sync.decryptNote(key, serverNote);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    async function applyServerNote(serverNote, isConflict, key) {
+      var local = findDoc(serverNote.id);
+      var knownRev = Number(syncSession.baseRevs[serverNote.id] || 0);
+      var dirty = !!syncDirty[serverNote.id];
+
+      if (!isConflict && local && dirty && serverNote.rev > knownRev) {
+        await applyServerNote(serverNote, true);
+        return;
+      }
+
+      var resolvedKey = key || await ensureSyncKey();
+      var content = await decryptServerNote(serverNote, resolvedKey);
+
+      if (isConflict && local) {
+        var copy = createDoc(local.body);
+        var base = String(local.title || firstLine(local.body) || "").trim();
+        copy.title = (base ? base + " " : "") + t("sync.conflictSuffix");
+        copy.updatedAt = Date.now();
+        enqueueWrite(copy);
+      }
+
+      if (!local) {
+        if (serverNote.deletedAt || !content) {
+          syncSession.baseRevs[serverNote.id] = serverNote.rev;
+          return;
+        }
+
+        local = {
+          id: serverNote.id,
+          title: content.title,
+          body: content.body,
+          createdAt: serverNote.updatedAt,
+          updatedAt: serverNote.updatedAt,
+          pinned: false,
+          deletedAt: null
+        };
+        docs.push(local);
+      } else {
+        syncApplying = true;
+        if (content) {
+          local.title = content.title;
+          local.body = content.body;
+        }
+        local.updatedAt = serverNote.updatedAt;
+        local.deletedAt = serverNote.deletedAt || null;
+        syncApplying = false;
+      }
+
+      syncApplying = true;
+      enqueueWrite(local);
+      syncApplying = false;
+
+      syncSession.baseRevs[serverNote.id] = serverNote.rev;
+      syncSession.lastSynced[serverNote.id] = Date.now();
+      delete syncDirty[serverNote.id];
+
+      if (current && current.id === local.id && document.activeElement !== area) {
+        openDoc(local, { silent: true, skipFlush: true });
+      }
+    }
+
+    function formatRecoveryKey(value) {
+      return String(value || "").replace(/(.{4})/g, "$1 ").trim();
+    }
+
+    async function loadDevices() {
+      if (!syncDevicesEl || !syncReady()) return;
+
+      try {
+        var result = await Sync.api("/auth/devices", { token: syncToken() });
+        syncDevicesEl.textContent = "";
+
+        if (!result.devices || !result.devices.length) {
+          var empty = document.createElement("li");
+          empty.className = "sync-device sync-device--muted";
+          empty.textContent = t("sync.devicesEmpty");
+          syncDevicesEl.appendChild(empty);
+          return;
+        }
+
+        result.devices.forEach(function (device) {
+          var row = document.createElement("li");
+          row.className = "sync-device";
+
+          var name = document.createElement("span");
+          name.className = "sync-device-name";
+          name.textContent = device.label || t("sync.deviceFallback");
+          if (device.id === syncSession.deviceId) {
+            name.textContent += " · " + t("sync.deviceThis");
+          }
+
+          var meta = document.createElement("span");
+          meta.className = "sync-device-meta";
+          meta.textContent = device.revoked_at
+            ? t("sync.deviceRevoked")
+            : relativeTime(device.last_seen_at || device.created_at);
+
+          row.appendChild(name);
+          row.appendChild(meta);
+          syncDevicesEl.appendChild(row);
+        });
+      } catch (error) {
+        handleSyncError(error);
+      }
+    }
+
+    async function checkRequestStatus() {
+      if (!Sync || !syncSession || !syncSession.requestId || !syncRequestStatus) return;
+
+      try {
+        var result = await Sync.api("/access/status?id=" + encodeURIComponent(syncSession.requestId));
+        var keys = {
+          pending: "sync.requestPending",
+          approved: "sync.requestApproved",
+          rejected: "sync.requestRejected"
+        };
+        syncRequestStatus.textContent = t(keys[result.status] || "sync.requestPending");
+      } catch (error) {
+        syncRequestStatus.textContent = "";
+      }
+    }
+
+    async function sendAccessRequest() {
+      var contact = syncContact ? syncContact.value.trim() : "";
+      if (contact.length < 3) {
+        if (syncContact) syncContact.focus();
+        return;
+      }
+
+      if (syncRequestError) syncRequestError.textContent = "";
+
+      try {
+        var result = await Sync.api("/access/request", {
+          method: "POST",
+          body: {
+            contact: contact,
+            note: syncNoteField ? syncNoteField.value.trim() : "",
+            website: syncWebsite ? syncWebsite.value : ""
+          }
+        });
+
+        syncSession = Sync.loadSession();
+        syncSession.requestId = result.id;
+        saveSyncSession();
+        setSyncView("requested");
+        checkRequestStatus();
+        toast(t("sync.toastRequestSent"));
+      } catch (error) {
+        if (syncRequestError) syncRequestError.textContent = t("sync.errorGeneric");
+      }
+    }
+
+    async function claimAccessCode(code) {
+      if (syncClaimError) syncClaimError.textContent = "";
+
+      try {
+        var recoveryKey = Sync.randomRecoveryKey();
+        var keys = await Sync.deriveKeys(recoveryKey);
+        var result = await Sync.api("/auth/claim", {
+          method: "POST",
+          body: { code: code, authProof: keys.authProof, label: syncDeviceLabel() }
+        });
+
+        syncSession = Sync.loadSession();
+        syncSession.accountId = result.accountId;
+        syncSession.deviceId = result.deviceId;
+        syncSession.deviceToken = result.deviceToken;
+        syncSession.recoveryKey = recoveryKey;
+        syncSession.encKey = keys.encKey;
+        syncSession.cursor = 0;
+        syncSession.baseRevs = {};
+        syncSession.lastSynced = {};
+        syncSession.requestId = null;
+        saveSyncSession();
+
+        syncKey = await Sync.importEncKey(keys.encKey);
+        docs.forEach(function (doc) {
+          if (!isPristine(doc)) syncDirty[doc.id] = true;
+        });
+
+        if (syncRecoveryEl) syncRecoveryEl.textContent = formatRecoveryKey(recoveryKey);
+        setSyncView("recovery");
+        setSyncStatus("idle");
+        toast(t("sync.toastActivated"));
+        scheduleSync(1200);
+      } catch (error) {
+        if (syncClaimError) {
+          syncClaimError.textContent = error && error.code === "claim_invalid"
+            ? t("sync.claimFailed")
+            : t("sync.errorGeneric");
+        }
+      }
+    }
+
+    async function startPairing() {
+      if (!syncReady()) return;
+
+      try {
+        var result = await Sync.api("/auth/pair/start", { method: "POST", token: syncToken() });
+        var payload = Sync.encodePairPayload({
+          a: syncSession.accountId,
+          c: result.code,
+          k: syncSession.encKey
+        });
+
+        syncPairUrl = location.origin + "/zen-write/#pair=" + payload;
+        if (syncPairCodeEl) syncPairCodeEl.textContent = result.code;
+        if (syncPairBox) syncPairBox.hidden = false;
+        Sync.renderQr(syncQrEl, syncPairUrl);
+        toast(t("sync.pairReady"));
+      } catch (error) {
+        handleSyncError(error);
+      }
+    }
+
+    function readPairHash() {
+      var match = /^#pair=(.+)$/.exec(location.hash || "");
+      if (!match) return null;
+
+      var payload = Sync.decodePairPayload(match[1]);
+      try {
+        history.replaceState(null, "", location.pathname + location.search);
+      } catch (error) {
+        // abaikan
+      }
+      return payload;
+    }
+
+    async function pairFromPayload(payload) {
+      if (!payload) return;
+      if (!window.confirm(t("sync.pairConfirm"))) return;
+
+      try {
+        var result = await Sync.api("/auth/pair", {
+          method: "POST",
+          body: { code: payload.code, label: syncDeviceLabel() }
+        });
+
+        syncSession = Sync.loadSession();
+        syncSession.accountId = result.accountId;
+        syncSession.deviceId = result.deviceId;
+        syncSession.deviceToken = result.deviceToken;
+        syncSession.encKey = payload.encKey;
+        syncSession.recoveryKey = null;
+        syncSession.cursor = 0;
+        syncSession.baseRevs = {};
+        syncSession.lastSynced = {};
+        saveSyncSession();
+
+        syncKey = await Sync.importEncKey(payload.encKey);
+        docs.forEach(function (doc) {
+          if (!isPristine(doc)) syncDirty[doc.id] = true;
+        });
+
+        setSyncStatus("idle");
+        setSyncView("active");
+        toast(t("sync.toastPaired"));
+        scheduleSync(800);
+      } catch (error) {
+        toast(t("sync.pairInvalid"));
+      }
+    }
+
+    async function revokeThisDevice() {
+      if (!window.confirm(t("sync.revokeConfirm"))) return;
+
+      try {
+        await Sync.api("/auth/revoke", { method: "POST", token: syncToken() });
+      } catch (error) {
+        // tetap bersihkan sesi lokal
+      }
+
+      Sync.clearSession();
+      syncSession = Sync.loadSession();
+      syncKey = null;
+      syncDirty = {};
+      syncStatus = "idle";
+      setSyncStatus("idle");
+      setSyncView("soon");
+      toast(t("sync.toastRevoked"));
+    }
+
+    function openSyncDialog() {
+      if (!syncDialog) return;
+
+      if (syncReady()) {
+        setSyncView("active");
+        updateSyncStatusText();
+        loadDevices();
+        if (syncStatus !== "expired" && syncStatus !== "error") syncNow();
+      } else if (syncSession && syncSession.requestId) {
+        setSyncView("requested");
+        checkRequestStatus();
+      } else {
+        setSyncView("soon");
+      }
+
+      if (syncRequestForm) syncRequestForm.hidden = true;
+      if (syncClaimError) syncClaimError.textContent = "";
+
+      if (typeof syncDialog.showModal === "function") syncDialog.showModal();
+      else syncDialog.setAttribute("open", "");
+    }
+
+    function closeSyncDialog() {
+      if (!syncDialog) return;
+      if (typeof syncDialog.close === "function") syncDialog.close();
+      else syncDialog.removeAttribute("open");
+    }
+
+    function initSync() {
+      if (!Sync) return;
+
+      var pair = readPairHash();
+      if (pair) {
+        pairFromPayload(pair);
+        return;
+      }
+
+      if (!syncReady()) {
+        setSyncStatus("idle");
+        return;
+      }
+
+      ensureSyncKey()
+        .then(function () {
+          setSyncStatus("idle");
+          scheduleSync(1200);
+        })
+        .catch(function () {
+          setSyncStatus("error", t("sync.errorGeneric"));
+        });
+    }
+
     function boot() {
       var settings = readSettings();
 
@@ -1172,11 +1761,13 @@
           }
 
           requestPersistence();
+          initSync();
         })
         .catch(function () {
           openDoc(createDoc(""), { silent: true, skipFlush: true });
           setSaved("unavailable");
           toast(t("toast.noStorage"));
+          initSync();
         });
     }
 
@@ -2660,6 +3251,7 @@
 
       i18n.setLang(code);
       syncLanguage();
+      updateSyncStatusText();
       renderPanel();
       saveSettings({ lang: activeLang() });
 
@@ -3076,6 +3668,86 @@
         if (isPanelOpen()) closePanel();
         else openPanel();
       });
+    });
+
+    /* Sync dan cadangan
+       ---------------------------------------------------------- */
+
+    if (syncButton) syncButton.addEventListener("click", openSyncDialog);
+    if (syncClose) syncClose.addEventListener("click", closeSyncDialog);
+
+    if (syncDialog) {
+      syncDialog.addEventListener("click", function (event) {
+        if (event.target === syncDialog) closeSyncDialog();
+
+        var action = event.target.closest ? event.target.closest("[data-sync-act]") : null;
+        if (!action) return;
+
+        var name = action.getAttribute("data-sync-act");
+        if (name === "request-open" && syncRequestForm) {
+          syncRequestForm.hidden = false;
+          if (syncContact) syncContact.focus();
+        } else if (name === "claim") {
+          setSyncView("claim");
+          if (syncClaimCode) syncClaimCode.focus();
+        } else if (name === "refresh") {
+          checkRequestStatus();
+        } else if (name === "now") {
+          syncNow({ toast: true });
+        } else if (name === "pair") {
+          startPairing();
+        } else if (name === "pair-copy") {
+          if (syncPairUrl) window.Perkakas.copy(syncPairUrl);
+        } else if (name === "reveal") {
+          if (syncSession && syncSession.recoveryKey) {
+            syncRevealKeyEl.textContent = formatRecoveryKey(syncSession.recoveryKey);
+            syncRevealKeyEl.hidden = false;
+          } else {
+            toast(t("sync.toastNoKey"));
+          }
+        } else if (name === "recovery-copy") {
+          if (syncSession && syncSession.recoveryKey) window.Perkakas.copy(syncSession.recoveryKey);
+        } else if (name === "recovery-download") {
+          if (syncSession && syncSession.recoveryKey) {
+            downloadBlob(
+              new Blob(
+                [t("sync.title") + "\n" + t("sync.recoveryLead") + "\n\n" + syncSession.recoveryKey + "\n"],
+                { type: "text/plain;charset=utf-8" }
+              ),
+              "zen-write-recovery-key.txt"
+            );
+          }
+        } else if (name === "recovery-done") {
+          setSyncView("active");
+          loadDevices();
+          scheduleSync(1000);
+        } else if (name === "revoke") {
+          revokeThisDevice();
+        }
+      });
+    }
+
+    if (syncRequestForm) {
+      syncRequestForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        sendAccessRequest();
+      });
+    }
+
+    if (syncClaimForm) {
+      syncClaimForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        var code = syncClaimCode ? syncClaimCode.value.trim() : "";
+        if (code) claimAccessCode(code);
+      });
+    }
+
+    window.addEventListener("online", function () {
+      if (syncReady()) scheduleSync(500);
+    });
+
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible" && syncReady()) scheduleSync(1000);
     });
 
     if (notesClose) notesClose.addEventListener("click", closePanel);

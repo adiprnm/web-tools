@@ -103,6 +103,9 @@ description: A distraction-free writing room with sentence and paragraph focus m
       <span data-i18n="notes.new">New note</span>
     </button>
     <div class="notes-actions-end">
+      <button type="button" class="icon-btn" id="writing-notes-sync" aria-label="Sync and backup" title="Sync and backup" aria-haspopup="dialog" aria-controls="writing-sync" data-i18n-aria-label="sync.open" data-i18n-title="sync.open">
+        <svg class="icon" aria-hidden="true"><use href="#i-cloud"></use></svg>
+      </button>
       <button type="button" class="icon-btn" id="writing-notes-export" aria-label="Export all notes" title="Export all (.json)" data-i18n-aria-label="notes.export" data-i18n-title="notes.exportTitle">
         <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
       </button>
@@ -292,5 +295,104 @@ description: A distraction-free writing room with sentence and paragraph focus m
   </div>
 </dialog>
 
+
+<dialog class="pick-dialog sync-dialog" id="writing-sync" aria-labelledby="writing-sync-title">
+  <div class="pick-dialog-head">
+    <h2 id="writing-sync-title" data-i18n="sync.title">Sync &amp; backup</h2>
+    <button type="button" class="icon-btn" id="writing-sync-close" aria-label="Close" title="Close" data-i18n-aria-label="dialog.close" data-i18n-title="dialog.close">
+      <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+    </button>
+  </div>
+  <div class="pick-dialog-inner" id="writing-sync-body">
+
+    <section class="sync-view" data-sync-view="soon">
+      <p class="sync-lead" data-i18n="sync.soonLead">Sync and backup are still invite-only while they are being prepared.</p>
+      <p class="sync-note" data-i18n="sync.soonNote">Notes stay on this device by default. Sync is optional, end-to-end encrypted, and needs approval.</p>
+      <div class="sync-actions">
+        <button type="button" class="btn btn--primary btn--small" data-sync-act="request-open" data-i18n="sync.requestOpen">Request access</button>
+        <button type="button" class="btn btn--quiet btn--small" data-sync-act="claim" data-i18n="sync.haveCode">I have a code</button>
+      </div>
+      <form class="sync-form" id="writing-sync-request-form" hidden>
+        <label class="field">
+          <span class="field-label" data-i18n="sync.contact">Contact</span>
+          <input type="text" id="writing-sync-contact" maxlength="200" autocomplete="email" placeholder="email, Telegram, or WhatsApp" data-i18n-placeholder="sync.contactPlaceholder" required>
+          <span class="field-hint field-hint--below" data-i18n="sync.contactHint">So I can send you the access code.</span>
+        </label>
+        <label class="field">
+          <span class="field-label" data-i18n="sync.noteLabel">What will you write?</span>
+          <input type="text" id="writing-sync-note" maxlength="500" placeholder="Optional" data-i18n-placeholder="sync.optional">
+        </label>
+        <input type="text" id="writing-sync-website" class="sync-honeypot" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <p class="field-error" id="writing-sync-request-error" role="alert"></p>
+        <button type="submit" class="btn btn--primary btn--small" data-i18n="sync.send">Send request</button>
+      </form>
+    </section>
+
+    <section class="sync-view" data-sync-view="requested" hidden>
+      <p class="sync-lead" data-i18n="sync.requested">Your request is in. I read these by hand, so it may take a while.</p>
+      <p class="sync-note" id="writing-sync-request-status"></p>
+      <div class="sync-actions">
+        <button type="button" class="btn btn--small" data-sync-act="refresh" data-i18n="sync.checkAgain">Check again</button>
+        <button type="button" class="btn btn--quiet btn--small" data-sync-act="claim" data-i18n="sync.haveCode">I have a code</button>
+      </div>
+    </section>
+
+    <section class="sync-view" data-sync-view="claim" hidden>
+      <p class="sync-lead" data-i18n="sync.claimLead">Paste the access code you received. It works once.</p>
+      <form class="sync-form" id="writing-sync-claim-form">
+        <label class="field">
+          <span class="field-label" data-i18n="sync.code">Access code</span>
+          <input type="text" id="writing-sync-code" autocomplete="one-time-code" spellcheck="false" autocapitalize="off" required>
+        </label>
+        <p class="field-error" id="writing-sync-claim-error" role="alert"></p>
+        <button type="submit" class="btn btn--primary btn--small" data-i18n="sync.activate">Activate</button>
+      </form>
+    </section>
+
+    <section class="sync-view" data-sync-view="recovery" hidden>
+      <p class="sync-lead" data-i18n="sync.recoveryLead">Save this recovery key somewhere safe.</p>
+      <p class="sync-note" data-i18n="sync.recoveryNote">It is the only way back if you lose every device. It is never sent to the server and cannot be recovered or reset.</p>
+      <code class="sync-recovery" id="writing-sync-recovery"></code>
+      <div class="sync-actions">
+        <button type="button" class="btn btn--small" data-sync-act="recovery-copy" data-i18n="sync.copy">Copy</button>
+        <button type="button" class="btn btn--small" data-sync-act="recovery-download" data-i18n="sync.download">Download</button>
+        <button type="button" class="btn btn--primary btn--small" data-sync-act="recovery-done" data-i18n="sync.continue">I saved it</button>
+      </div>
+    </section>
+
+    <section class="sync-view" data-sync-view="active" hidden>
+      <div class="sync-status-row">
+        <span class="sync-dot" id="writing-sync-dot" aria-hidden="true"></span>
+        <span class="sync-status-text" id="writing-sync-status">Idle</span>
+        <button type="button" class="btn btn--quiet btn--small" data-sync-act="now" data-i18n="sync.now">Sync now</button>
+      </div>
+      <p class="field-error" id="writing-sync-error" role="alert"></p>
+
+      <h3 class="sync-heading" data-i18n="sync.devices">Devices</h3>
+      <ul class="sync-devices" id="writing-sync-devices"></ul>
+
+      <h3 class="sync-heading" data-i18n="sync.pairHeading">Add a device</h3>
+      <p class="sync-note" data-i18n="sync.pairNote">Show a code here, then scan it with the camera on your other device. The code expires in five minutes.</p>
+      <button type="button" class="btn btn--small" data-sync-act="pair" data-i18n="sync.showPair">Show pairing code</button>
+      <div class="sync-pair" id="writing-sync-pair-box" hidden>
+        <div class="sync-qr" id="writing-sync-qr"></div>
+        <code class="sync-code" id="writing-sync-pair-code"></code>
+        <button type="button" class="btn btn--quiet btn--small" data-sync-act="pair-copy" data-i18n="sync.copyLink">Copy link</button>
+      </div>
+
+      <h3 class="sync-heading" data-i18n="sync.keyHeading">Recovery key</h3>
+      <button type="button" class="btn btn--quiet btn--small" data-sync-act="reveal" id="writing-sync-reveal" data-i18n="sync.showKey">Show recovery key</button>
+      <code class="sync-recovery" id="writing-sync-reveal-key" hidden></code>
+
+      <div class="sync-danger">
+        <button type="button" class="btn btn--quiet btn--small btn--danger" data-sync-act="revoke" data-i18n="sync.revoke">Sign out this device</button>
+      </div>
+    </section>
+
+  </div>
+</dialog>
+
 <script src="{{ '/zen-write/i18n.js' | relative_url }}"></script>
+<script src="{{ '/assets/js/qrcode.js' | relative_url }}" defer></script>
+<script src="{{ '/zen-write/sync.js' | relative_url }}" defer></script>
 <script src="{{ '/zen-write/main.js' | relative_url }}" defer></script>

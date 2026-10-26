@@ -3600,3 +3600,210 @@ body.is-zen-flow .writing-area {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Sync dan cadangan: satu dialog dengan beberapa keadaan (belum tersedia,
+   permintaan terkirim, aktivasi, kunci pemulihan, dan panel aktif). */
+
+.sync-dialog {
+  width: min(460px, calc(100vw - 32px));
+}
+
+.sync-view[hidden] {
+  display: none;
+}
+
+.sync-lead {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.sync-note {
+  margin: 0 0 14px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 14px;
+}
+
+.sync-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.sync-form[hidden] {
+  display: none;
+}
+
+.sync-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sync-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0 10px;
+}
+
+.sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.sync-dot[data-state="idle"] {
+  background: #3f8a5b;
+}
+
+.sync-dot[data-state="syncing"] {
+  background: #b8862b;
+}
+
+.sync-dot[data-state="offline"],
+.sync-dot[data-state="error"],
+.sync-dot[data-state="expired"] {
+  background: var(--danger);
+}
+
+.sync-status-text {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sync-status-row .btn {
+  margin-left: auto;
+}
+
+.sync-heading {
+  margin: 18px 0 8px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sync-devices {
+  display: grid;
+  gap: 1px;
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.sync-device {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  background: var(--surface);
+}
+
+.sync-device + .sync-device {
+  border-top: 1px solid var(--line);
+}
+
+.sync-device--muted {
+  color: var(--muted);
+}
+
+.sync-device-name {
+  color: var(--ink);
+}
+
+.sync-device-meta {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.sync-pair {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.sync-pair[hidden] {
+  display: none;
+}
+
+.sync-qr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.sync-qr-canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.sync-code,
+.sync-recovery {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--ink);
+  word-break: break-all;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.sync-recovery {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+.sync-recovery[hidden] {
+  display: none;
+}
+
+.sync-danger {
+  margin-top: 24px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.sync-dialog .field-error {
+  margin: 0;
+}
+
+.sync-dialog .field-error[hidden] {
+  display: none;
+}
