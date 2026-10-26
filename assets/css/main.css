@@ -1860,21 +1860,6 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   min-height: 0;
   padding: 14px 18px 18px;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
-}
-
-.pick-dialog-inner::-webkit-scrollbar {
-  width: 8px;
-}
-
-.pick-dialog-inner::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
-  border-radius: 4px;
-}
-
-.pick-dialog-inner::-webkit-scrollbar-track {
-  background: transparent;
 }
 
 .pick-dialog-head {
@@ -2808,17 +2793,6 @@ body.is-notes-open .notes-panel {
   padding: 0 16px 8px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
-}
-
-.notes-body::-webkit-scrollbar {
-  width: 8px;
-}
-
-.notes-body::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
-  border-radius: 4px;
 }
 
 .notes-list {
@@ -3106,8 +3080,6 @@ body.is-notes-open .notes-panel {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
 }
 
 /* The body is focused when the dialog opens so keyboard scrolling works;
@@ -3115,19 +3087,6 @@ body.is-notes-open .notes-panel {
 .preview-body:focus,
 .preview-body:focus-visible {
   outline: none;
-}
-
-.preview-body::-webkit-scrollbar {
-  width: 8px;
-}
-
-.preview-body::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
-  border-radius: 4px;
-}
-
-.preview-body::-webkit-scrollbar-track {
-  background: transparent;
 }
 
 .preview-reading {
@@ -3430,36 +3389,75 @@ body.is-zen #writing-room {
   background: var(--paper);
 }
 
-/* An installed app keeps the classic scrollbar visible, so the writing room
-   gets the same quiet treatment as the panels: a slim thumb over a
-   transparent track, with room to breathe inside the gutter. */
+/* Scrollbars in the writing surfaces
+   ----------------------------------------------------------
+   An installed app keeps the classic scrollbar visible, and engines that
+   still draw stepper buttons put arrows over the page. Use a slim thumb
+   over a fully transparent track and drop the buttons entirely. */
 
-body.is-zen #writing-room {
-  scrollbar-width: thin;
-  scrollbar-color: var(--line-strong) transparent;
-}
-
-body.is-zen #writing-room::-webkit-scrollbar {
+body.is-zen #writing-room::-webkit-scrollbar,
+.notes-body::-webkit-scrollbar,
+.preview-body::-webkit-scrollbar,
+.pick-dialog-inner::-webkit-scrollbar {
   width: 10px;
-}
-
-body.is-zen #writing-room::-webkit-scrollbar-track {
+  height: 10px;
   background: transparent;
 }
 
-body.is-zen #writing-room::-webkit-scrollbar-thumb {
+body.is-zen #writing-room::-webkit-scrollbar-track,
+.notes-body::-webkit-scrollbar-track,
+.preview-body::-webkit-scrollbar-track,
+.pick-dialog-inner::-webkit-scrollbar-track,
+body.is-zen #writing-room::-webkit-scrollbar-track-piece,
+.notes-body::-webkit-scrollbar-track-piece,
+.preview-body::-webkit-scrollbar-track-piece,
+.pick-dialog-inner::-webkit-scrollbar-track-piece {
+  background: transparent;
+}
+
+body.is-zen #writing-room::-webkit-scrollbar-button,
+.notes-body::-webkit-scrollbar-button,
+.preview-body::-webkit-scrollbar-button,
+.pick-dialog-inner::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+body.is-zen #writing-room::-webkit-scrollbar-thumb,
+.notes-body::-webkit-scrollbar-thumb,
+.preview-body::-webkit-scrollbar-thumb,
+.pick-dialog-inner::-webkit-scrollbar-thumb {
   background-color: var(--line-strong);
   background-clip: content-box;
-  border: 3px solid transparent;
+  border: 2px solid transparent;
   border-radius: 999px;
 }
 
-body.is-zen #writing-room::-webkit-scrollbar-thumb:hover {
+body.is-zen #writing-room::-webkit-scrollbar-thumb:hover,
+.notes-body::-webkit-scrollbar-thumb:hover,
+.preview-body::-webkit-scrollbar-thumb:hover,
+.pick-dialog-inner::-webkit-scrollbar-thumb:hover {
   background-color: var(--muted);
 }
 
-body.is-zen #writing-room::-webkit-scrollbar-corner {
+body.is-zen #writing-room::-webkit-scrollbar-corner,
+.notes-body::-webkit-scrollbar-corner,
+.preview-body::-webkit-scrollbar-corner,
+.pick-dialog-inner::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Firefox keeps the standard properties. Engines that draw the webkit
+   pseudo elements ignore these, so the thumb and buttons above win there. */
+@supports not selector(::-webkit-scrollbar) {
+  body.is-zen #writing-room,
+  .notes-body,
+  .preview-body,
+  .pick-dialog-inner {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
 }
 
 /* Firefox mobile resizes the layout viewport for the keyboard. Keep the
