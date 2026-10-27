@@ -1204,6 +1204,19 @@
       return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? "Phone" : "Computer";
     }
 
+    // Antrean dirty hanya hidup di memori. Kalau tab ditutup sebelum push,
+    // bandingkan waktu ubah dengan yang terakhir tersinkron agar edit itu
+    // dikirim saat aplikasi dibuka lagi, bukan tertinggal atau tertimpa.
+    function markUnsyncedDocs() {
+      if (!syncReady()) return;
+
+      docs.forEach(function (doc) {
+        if (isPristine(doc)) return;
+        var syncedAt = Number(syncSession.lastSynced[doc.id] || 0);
+        if (Number(doc.updatedAt) > syncedAt) syncDirty[doc.id] = true;
+      });
+    }
+
     function markSyncDirty(doc) {
       if (!syncReady() || syncApplying || !doc) return;
       syncDirty[doc.id] = true;
@@ -1352,7 +1365,7 @@
           syncSession.baseRevs[id] = Number(syncSession.baseRevs[id] || 0) + 1;
           var currentDoc = findDoc(id);
           if (!currentDoc || sentAt[id] === currentDoc.updatedAt) delete syncDirty[id];
-          syncSession.lastSynced[id] = Date.now();
+          syncSession.lastSynced[id] = sentAt[id];
         });
 
         for (var c = 0; c < result.conflicts.length; c += 1) {
@@ -1453,7 +1466,7 @@
       syncApplying = false;
 
       syncSession.baseRevs[serverNote.id] = serverNote.rev;
-      syncSession.lastSynced[serverNote.id] = Date.now();
+      syncSession.lastSynced[serverNote.id] = serverNote.updatedAt;
       delete syncDirty[serverNote.id];
 
       if (current && current.id === local.id && document.activeElement !== area) {
@@ -1726,6 +1739,7 @@
 
       ensureSyncKey()
         .then(function () {
+          markUnsyncedDocs();
           setSyncStatus("idle");
           scheduleSync(1200);
         })
