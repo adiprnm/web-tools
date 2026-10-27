@@ -148,6 +148,12 @@
       "saved.failed": "Couldn't save",
       "saved.unavailable": "Storage unavailable",
 
+      "update.available": "Update available",
+      "update.applyTitle": "Load the newest version. Your notes are kept.",
+      "update.working": "Updating…",
+      "update.offline": "You're offline. Connect to the internet to update.",
+      "update.failed": "Couldn't update. Try again.",
+
       "time.now": "just now",
       "time.minutes": "{n} min ago",
       "time.hours": "{n} hr ago",
@@ -363,6 +369,12 @@
       "saved.titled": "Judul disimpan",
       "saved.failed": "Tidak bisa menyimpan",
       "saved.unavailable": "Penyimpanan tidak tersedia",
+
+      "update.available": "Pembaruan tersedia",
+      "update.applyTitle": "Muat versi terbaru. Catatanmu tetap tersimpan.",
+      "update.working": "Memperbarui…",
+      "update.offline": "Kamu sedang offline. Sambungkan internet untuk memperbarui.",
+      "update.failed": "Gagal memperbarui. Coba lagi.",
 
       "time.now": "baru saja",
       "time.minutes": "{n} mnt lalu",

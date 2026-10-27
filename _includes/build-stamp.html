@@ -1,0 +1,15 @@
+{%- comment -%}
+  Penanda build Zen Write.
+
+  Sementara memakai waktu build: nilainya berubah setiap deploy dan
+  tersedia di mana pun Jekyll dijalankan — lokal maupun GitHub Pages.
+  Kalau nanti penanda ini perlu sependek commit SHA, ganti isinya jadi
+  site.github.build_revision (hanya terisi saat dibangun GitHub Pages)
+  dengan cadangan waktu build, di file ini saja: build.js dan
+  version.json memakai include yang sama.
+
+  Dipakai oleh zen-write/build.js (penanda yang berjalan bersama aset)
+  dan zen-write/version.json (penanda terakhir di server). Keduanya harus
+  menghasilkan nilai yang sama pada satu build.
+{%- endcomment -%}
+{{- site.time | date: '%Y%m%d%H%M%S' -}}

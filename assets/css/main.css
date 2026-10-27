@@ -2758,6 +2758,33 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   color: var(--danger-text);
 }
 
+/* Tawaran pembaruan: sama sunyinya dengan status simpan, dan hanya muncul
+   kalau aset di server sudah berbeda dari yang sedang berjalan. */
+
+.writing-update {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.writing-update:hover {
+  color: var(--ink);
+}
+
+.writing-update[disabled] {
+  cursor: default;
+  opacity: 0.65;
+}
+
 @keyframes writing-saved-spin {
   to {
     transform: rotate(1turn);

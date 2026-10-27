@@ -1,6 +1,7 @@
-var CACHE_NAME = "zen-write-v34";
+var CACHE_NAME = "zen-write-v35";
 var APP_SHELL = [
   "/zen-write/",
+  "/zen-write/build.js",
   "/zen-write/i18n.js",
   "/zen-write/main.js",
   "/zen-write/sync.js",
@@ -51,6 +52,13 @@ self.addEventListener("fetch", function (event) {
   var requestUrl = new URL(event.request.url);
   if (requestUrl.origin === self.location.origin &&
       (requestUrl.pathname === "/zen-write/api" || requestUrl.pathname.indexOf("/zen-write/api/") === 0)) {
+    return;
+  }
+
+  // version.json adalah pembanding versi: menjawabnya dari cache sama saja
+  // dengan bilang "tidak ada pembaruan" selamanya. Biarkan jaringan.
+  if (requestUrl.origin === self.location.origin &&
+      requestUrl.pathname === "/zen-write/version.json") {
     return;
   }
 

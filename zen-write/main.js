@@ -5222,6 +5222,115 @@
       if (formatBubble && !formatBubble.hidden) scheduleBubble();
     });
 
+    /* -------------------------------------------------------------
+       Pembaruan aplikasi
+
+       Aset disajikan dari cache dulu lalu disegarkan di latar belakang,
+       jadi build baru baru terpakai pada muat berikutnya. build.js dan
+       version.json sama-sama membawa waktu build: kalau berbeda, ada
+       aset baru menunggu. Tidak ada muat ulang otomatis — orang sedang
+       menulis di sini, jadi pembaruan selalu ditawarkan, tidak dipaksa.
+       ------------------------------------------------------------- */
+
+    var updateButton = document.getElementById("writing-update");
+    var updateAvailable = false;
+    var updateBusy = false;
+    var updateCheckedAt = 0;
+    var UPDATE_CHECK_INTERVAL = 60000;
+    var UPDATE_CACHE_PREFIX = "zen-write-";
+
+    function setUpdateLabel(state) {
+      if (!updateButton) return;
+      updateButton.dataset.state = state;
+      updateButton.textContent = t(state === "working" ? "update.working" : "update.available");
+    }
+
+    function checkForUpdate() {
+      var running = window.ZenWriteBuild;
+
+      if (!updateButton || updateBusy || updateAvailable) return;
+      if (!running || !navigator.onLine) return;
+      if (Date.now() - updateCheckedAt < UPDATE_CHECK_INTERVAL) return;
+
+      updateCheckedAt = Date.now();
+
+      fetch("/zen-write/version.json", { cache: "no-store" })
+        .then(function (response) {
+          return response.ok ? response.json() : null;
+        })
+        .then(function (data) {
+          if (!data || !data.build || data.build === running) return;
+          updateAvailable = true;
+          setUpdateLabel("ready");
+          updateButton.hidden = false;
+        })
+        .catch(function () {
+          // Tanpa jaringan tidak ada yang bisa diambil; coba lagi nanti.
+        });
+    }
+
+    function applyUpdate() {
+      if (updateBusy) return;
+
+      if (!navigator.onLine) {
+        toast(t("update.offline"));
+        return;
+      }
+
+      updateBusy = true;
+      if (updateButton) {
+        updateButton.disabled = true;
+        setUpdateLabel("working");
+      }
+
+      // Draf yang tertunda ditulis dulu: satu-satunya cara memakai aset baru
+      // adalah memuat ulang, dan tulisan tidak boleh ikut hilang.
+      commitCurrent();
+
+      writeChain
+        .catch(function () {})
+        .then(function () {
+          return caches.keys();
+        })
+        .then(function (keys) {
+          return Promise.all(
+            keys.filter(function (key) {
+              return key.indexOf(UPDATE_CACHE_PREFIX) === 0;
+            }).map(function (key) {
+              return caches.delete(key);
+            })
+          );
+        })
+        .then(function () {
+          return navigator.serviceWorker ? navigator.serviceWorker.getRegistration() : null;
+        })
+        .then(function (registration) {
+          // Worker baru mengambil alih dan mem-precache aset terbaru; kalau
+          // gagal, muat ulang tetap menarik aset dari jaringan.
+          return registration ? registration.update() : null;
+        })
+        .then(function () {
+          window.location.reload();
+        })
+        .catch(function () {
+          updateBusy = false;
+          if (!updateButton) return;
+          updateButton.disabled = false;
+          setUpdateLabel("ready");
+          toast(t("update.failed"));
+        });
+    }
+
+    if (updateButton) {
+      updateButton.addEventListener("click", applyUpdate);
+
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible") checkForUpdate();
+      });
+
+      window.addEventListener("online", checkForUpdate);
+    }
+
     window.addEventListener("beforeunload", function () {
       commitCurrent();
     });
@@ -5242,5 +5351,6 @@
     syncKeyboard();
     boot();
     setZen(true);
+    checkForUpdate();
   });
 })();
