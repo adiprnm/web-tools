@@ -130,6 +130,11 @@
     var syncClaimForm = document.getElementById("writing-sync-claim-form");
     var syncClaimCode = document.getElementById("writing-sync-code");
     var syncClaimError = document.getElementById("writing-sync-claim-error");
+    var syncRestoreForm = document.getElementById("writing-sync-restore-form");
+    var syncRestoreKey = document.getElementById("writing-sync-restore-key");
+    var syncRestoreError = document.getElementById("writing-sync-restore-error");
+    var syncAccountEl = document.getElementById("writing-sync-account");
+    var syncRecoveryAccountEl = document.getElementById("writing-sync-recovery-account");
     var syncRecoveryEl = document.getElementById("writing-sync-recovery");
     var syncStatusEl = document.getElementById("writing-sync-status");
     var syncStatusDot = document.getElementById("writing-sync-dot");
@@ -1299,6 +1304,23 @@
       setSyncStatus("syncing");
 
       try {
+        /* Selesai restore, perangkat ini belum punya baseRevs sama sekali.
+           Rekonsiliasi dijalankan sebelum push pertama supaya catatan yang
+           sudah ada di server tidak dipush dengan baseRev 0 (yang berubah
+           menjadi "salinan konflik") dan suntingan lokal yang lebih baru
+           tidak tertimpa versi server. Kalau pull gagal, penandanya tetap
+           ada sehingga percobaan berikutnya mengulang urutan yang sama. */
+        if (syncSession.reconcile) {
+          var localBefore = docs.map(cloneDoc);
+          // Antrean dirty lama dibuang: isinya belum punya baseRev, dan pull di
+          // bawah akan menganggapnya konflik lalu membuat salinan ganda.
+          syncDirty = {};
+          await syncPull();
+          restoreNewerLocal(localBefore);
+          syncSession.reconcile = false;
+          saveSyncSession();
+        }
+
         await syncPush();
         await syncPull();
         setSyncStatus("idle");
@@ -1478,6 +1500,34 @@
       return String(value || "").replace(/(.{4})/g, "$1 ").trim();
     }
 
+    // Kunci 32 byte menjadi 43 karakter base64url. Bentuk yang ditempel bisa
+    // membawa spasi per empat karakter, atau seluruh isi berkas kunci yang
+    // juga memuat account id, jadi kandidat dicari dulu lalu diuji ke server.
+    function recoveryKeyCandidates(raw) {
+      var text = String(raw || "");
+      var compact = text.replace(/\s+/g, "");
+      var list = [];
+
+      if (/^[A-Za-z0-9_-]{43}$/.test(compact)) list.push(compact);
+
+      var found = text.match(/[A-Za-z0-9_-]{43}/g) || [];
+      found.forEach(function (match) {
+        if (list.indexOf(match) < 0) list.push(match);
+      });
+
+      return list;
+    }
+
+    function renderSyncAccount() {
+      var id = syncSession && syncSession.accountId ? syncSession.accountId : "";
+
+      if (syncAccountEl) syncAccountEl.textContent = id || "—";
+      if (syncRecoveryAccountEl) {
+        syncRecoveryAccountEl.textContent = id ? t("sync.accountLabel", { id: id }) : "";
+        syncRecoveryAccountEl.hidden = !id;
+      }
+    }
+
     async function loadDevices() {
       if (!syncDevicesEl || !syncReady()) return;
 
@@ -1594,6 +1644,7 @@
         });
 
         if (syncRecoveryEl) syncRecoveryEl.textContent = formatRecoveryKey(recoveryKey);
+        renderSyncAccount();
         setSyncView("recovery");
         setSyncStatus("idle");
         toast(t("sync.toastActivated"));
@@ -1669,11 +1720,110 @@
 
         setSyncStatus("idle");
         setSyncView("active");
+        renderSyncAccount();
         toast(t("sync.toastPaired"));
         scheduleSync(800);
       } catch (error) {
         toast(t("sync.pairInvalid"));
       }
+    }
+
+    /* Pemulihan setelah data browser terhapus: localStorage (sesi, kunci,
+       cursor) tidak ada lagi, jadi accountId tidak diketahui. Cukup recovery
+       key — authProof-nya yang membuat server menemukan akunnya. */
+    async function restoreFromRecoveryKey(raw) {
+      if (syncRestoreError) syncRestoreError.textContent = "";
+
+      var candidates = recoveryKeyCandidates(raw);
+      if (!candidates.length) {
+        if (syncRestoreError) syncRestoreError.textContent = t("sync.restoreFailed");
+        return;
+      }
+
+      commitCurrent();
+      setSyncStatus("syncing");
+
+      var restored = null;
+
+      try {
+        for (var i = 0; i < candidates.length && !restored; i += 1) {
+          var keys = await Sync.deriveKeys(candidates[i]);
+          try {
+            var result = await Sync.api("/auth/recover", {
+              method: "POST",
+              body: { authProof: keys.authProof, label: syncDeviceLabel() }
+            });
+            restored = { recoveryKey: candidates[i], encKey: keys.encKey, result: result };
+          } catch (error) {
+            if (!error || error.code !== "recover_invalid") throw error;
+          }
+        }
+      } catch (error) {
+        handleSyncError(error);
+        return;
+      }
+
+      if (!restored) {
+        setSyncStatus("idle");
+        if (syncRestoreError) syncRestoreError.textContent = t("sync.restoreFailed");
+        return;
+      }
+
+      // Isi lokal dibandingkan setelah pull, jadi penanda rekonsiliasi dipasang
+      // dan syncNow() yang mengurus urutan pull → kembalikan suntingan → push.
+      syncSession = Sync.loadSession();
+      syncSession.accountId = restored.result.accountId;
+      syncSession.deviceId = restored.result.deviceId;
+      syncSession.deviceToken = restored.result.deviceToken;
+      syncSession.recoveryKey = restored.recoveryKey;
+      syncSession.encKey = restored.encKey;
+      syncSession.cursor = 0;
+      syncSession.baseRevs = {};
+      syncSession.lastSynced = {};
+      syncSession.requestId = null;
+      syncSession.reconcile = true;
+      saveSyncSession();
+
+      syncKey = await Sync.importEncKey(restored.encKey);
+
+      setSyncView("active");
+      renderSyncAccount();
+      loadDevices();
+
+      await syncNow();
+
+      if (syncStatus === "idle") toast(t("sync.toastRestored"));
+
+      renderPanel();
+      scheduleSync(60000);
+    }
+
+    /* Pull menimpa isi lokal dengan versi server. Kalau IndexedDB masih utuh
+       (localStorage yang hilang), suntingan yang lebih baru dari versi server
+       harus dikembalikan supaya bisa menang saat push, bukan hilang diam-diam. */
+    function restoreNewerLocal(localBefore) {
+      var reopened = false;
+
+      localBefore.forEach(function (snapshot) {
+        if (isPristine(snapshot)) return;
+
+        var doc = findDoc(snapshot.id);
+        if (!doc) return;
+
+        var serverAt = Number(syncSession.lastSynced[snapshot.id] || 0);
+        if (serverAt && Number(snapshot.updatedAt) <= serverAt) return;
+
+        doc.title = snapshot.title;
+        doc.body = snapshot.body;
+        doc.pinned = snapshot.pinned;
+        doc.updatedAt = snapshot.updatedAt;
+        doc.deletedAt = snapshot.deletedAt || null;
+        enqueueWrite(doc);
+
+        if (current && current.id === doc.id) reopened = true;
+      });
+
+      if (reopened) openDoc(current, { silent: true, skipFlush: true });
     }
 
     async function revokeThisDevice() {
@@ -1691,6 +1841,7 @@
       syncDirty = {};
       syncStatus = "idle";
       setSyncStatus("idle");
+      renderSyncAccount();
       setSyncView("soon");
       toast(t("sync.toastRevoked"));
     }
@@ -1700,6 +1851,7 @@
 
       if (syncReady()) {
         setSyncView("active");
+        renderSyncAccount();
         updateSyncStatusText();
         loadDevices();
         if (syncStatus !== "expired" && syncStatus !== "error") syncNow();
@@ -1712,6 +1864,7 @@
 
       if (syncRequestForm) syncRequestForm.hidden = true;
       if (syncClaimError) syncClaimError.textContent = "";
+      if (syncRestoreError) syncRestoreError.textContent = "";
 
       if (typeof syncDialog.showModal === "function") syncDialog.showModal();
       else syncDialog.setAttribute("open", "");
@@ -3317,6 +3470,7 @@
       i18n.setLang(code);
       syncLanguage();
       updateSyncStatusText();
+      renderSyncAccount();
       renderPanel();
       saveSettings({ lang: activeLang() });
 
@@ -4894,6 +5048,10 @@
         } else if (name === "claim") {
           setSyncView("claim");
           if (syncClaimCode) syncClaimCode.focus();
+        } else if (name === "restore-open") {
+          setSyncView("restore");
+          if (syncRestoreError) syncRestoreError.textContent = "";
+          if (syncRestoreKey) syncRestoreKey.focus();
         } else if (name === "refresh") {
           checkRequestStatus();
         } else if (name === "now") {
@@ -4913,11 +5071,21 @@
           if (syncSession && syncSession.recoveryKey) window.Perkakas.copy(syncSession.recoveryKey);
         } else if (name === "recovery-download") {
           if (syncSession && syncSession.recoveryKey) {
+            // Berkas ini satu-satunya salinan di luar browser, jadi account id
+            // ikut ditulis meski pemulihan hanya butuh kuncinya.
+            var kit = [
+              t("sync.title"),
+              "",
+              t("sync.accountLabel", { id: syncSession.accountId || "-" }),
+              t("sync.keyHeading") + ": " + syncSession.recoveryKey,
+              "",
+              t("sync.restoreLead"),
+              t("sync.recoveryNote"),
+              ""
+            ].join("\n");
+
             downloadBlob(
-              new Blob(
-                [t("sync.title") + "\n" + t("sync.recoveryLead") + "\n\n" + syncSession.recoveryKey + "\n"],
-                { type: "text/plain;charset=utf-8" }
-              ),
+              new Blob([kit], { type: "text/plain;charset=utf-8" }),
               "zen-write-recovery-key.txt"
             );
           }
@@ -4943,6 +5111,14 @@
         event.preventDefault();
         var code = syncClaimCode ? syncClaimCode.value.trim() : "";
         if (code) claimAccessCode(code);
+      });
+    }
+
+    if (syncRestoreForm) {
+      syncRestoreForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        var key = syncRestoreKey ? syncRestoreKey.value : "";
+        if (key.trim()) restoreFromRecoveryKey(key);
       });
     }
 

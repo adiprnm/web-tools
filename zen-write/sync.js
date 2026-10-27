@@ -159,7 +159,10 @@
       cursor: 0,
       baseRevs: {},
       lastSynced: {},
-      requestId: null
+      requestId: null,
+      // true setelah pemulihan: syncNow() menarik seluruh riwayat dulu sebelum
+      // push pertama, sampai pull itu berhasil.
+      reconcile: false
     };
   }
 

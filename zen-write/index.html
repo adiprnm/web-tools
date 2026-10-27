@@ -424,6 +424,7 @@ twitter:
       <div class="sync-actions">
         <button type="button" class="btn btn--primary btn--small" data-sync-act="request-open" data-i18n="sync.requestOpen">Request access</button>
         <button type="button" class="btn btn--quiet btn--small" data-sync-act="claim" data-i18n="sync.haveCode">I have a code</button>
+        <button type="button" class="btn btn--quiet btn--small" data-sync-act="restore-open" data-i18n="sync.restoreOpen">I have a recovery key</button>
       </div>
       <form class="sync-form" id="writing-sync-request-form" hidden>
         <label class="field">
@@ -460,12 +461,30 @@ twitter:
         <p class="field-error" id="writing-sync-claim-error" role="alert"></p>
         <button type="submit" class="btn btn--primary btn--small" data-i18n="sync.activate">Activate</button>
       </form>
+      <p class="sync-note" data-i18n="sync.restoreSwitch">Already had sync and lost this browser's data? Restore with your recovery key.</p>
+      <button type="button" class="btn btn--quiet btn--small" data-sync-act="restore-open" data-i18n="sync.restoreOpen">I have a recovery key</button>
+    </section>
+
+    <section class="sync-view" data-sync-view="restore" hidden>
+      <p class="sync-lead" data-i18n="sync.restoreLead">Enter the recovery key you saved. Your notes come back from the server.</p>
+      <form class="sync-form" id="writing-sync-restore-form">
+        <label class="field">
+          <span class="field-label" data-i18n="sync.keyHeading">Recovery key</span>
+          <input type="text" id="writing-sync-restore-key" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="xxxx xxxx xxxx …" data-i18n-placeholder="sync.restorePlaceholder" required>
+          <span class="field-hint field-hint--below" data-i18n="sync.restoreHint">Spaces are ignored. Pasting the whole key file works too.</span>
+        </label>
+        <p class="field-error" id="writing-sync-restore-error" role="alert"></p>
+        <button type="submit" class="btn btn--primary btn--small" data-i18n="sync.restore">Restore</button>
+      </form>
+      <p class="sync-note" data-i18n="sync.restoreWarning">Every device still signed in to this account will be signed out. Pair them again afterwards.</p>
+      <button type="button" class="btn btn--quiet btn--small" data-sync-act="claim" data-i18n="sync.restoreNoKey">I don't have a recovery key</button>
     </section>
 
     <section class="sync-view" data-sync-view="recovery" hidden>
       <p class="sync-lead" data-i18n="sync.recoveryLead">Save this recovery key somewhere safe.</p>
       <p class="sync-note" data-i18n="sync.recoveryNote">It is the only way back if you lose every device. It is never sent to the server and cannot be recovered or reset.</p>
       <code class="sync-recovery" id="writing-sync-recovery"></code>
+      <p class="sync-note sync-account" id="writing-sync-recovery-account" hidden></p>
       <div class="sync-actions">
         <button type="button" class="btn btn--small" data-sync-act="recovery-copy" data-i18n="sync.copy">Copy</button>
         <button type="button" class="btn btn--small" data-sync-act="recovery-download" data-i18n="sync.download">Download</button>
@@ -492,6 +511,10 @@ twitter:
         <code class="sync-code" id="writing-sync-pair-code"></code>
         <button type="button" class="btn btn--quiet btn--small" data-sync-act="pair-copy" data-i18n="sync.copyLink">Copy link</button>
       </div>
+
+      <h3 class="sync-heading" data-i18n="sync.accountHeading">Account</h3>
+      <p class="sync-note" data-i18n="sync.accountNote">Keep this with your recovery key. Support asks for it; the key alone is enough to restore.</p>
+      <code class="sync-code" id="writing-sync-account"></code>
 
       <h3 class="sync-heading" data-i18n="sync.keyHeading">Recovery key</h3>
       <button type="button" class="btn btn--quiet btn--small" data-sync-act="reveal" id="writing-sync-reveal" data-i18n="sync.showKey">Show recovery key</button>

@@ -4025,6 +4025,12 @@ body.has-keyboard.is-zen-flow #writing-room:has(.writing-area:focus) .writing-st
   display: none;
 }
 
+/* Catatan yang menyusul form (mis. peringatan setelah tombol pulihkan)
+   butuh jarak sendiri karena grid form sudah berakhir. */
+.sync-form + .sync-note {
+  margin-top: 14px;
+}
+
 .sync-honeypot {
   position: absolute;
   left: -9999px;
