@@ -3393,17 +3393,19 @@
       if (iconUse) iconUse.setAttribute("href", active ? "#i-fullscreen-exit" : "#i-fullscreen");
     }
 
-    // Keyboard on-screen: the visual viewport shrinks while the layout viewport
-    // keeps its height, so the gap between the two is what gives it away. The
-    // threshold skips the address bar and the safe area, which move the same
-    // viewport by a far smaller amount.
+    // Keyboard on-screen: it is the one thing that shortens the visual viewport
+    // while the layout viewport keeps its height. A pinched page shortens it
+    // too, by a lot, so the height is read back in layout pixels first — without
+    // that, a zoomed page would look like a keyboard forever and the caret space
+    // would never go away.
     var KEYBOARD_MIN_INSET = 120;
 
     function syncKeyboard() {
       var viewport = window.visualViewport;
       if (!viewport) return;
 
-      var inset = window.innerHeight - viewport.height - viewport.offsetTop;
+      var covered = viewport.height * (viewport.scale || 1);
+      var inset = document.documentElement.clientHeight - covered;
       document.body.classList.toggle("has-keyboard", inset > KEYBOARD_MIN_INSET);
     }
 
