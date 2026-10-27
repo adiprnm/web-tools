@@ -3826,12 +3826,14 @@ body.is-zen-flow .writing-area {
 
 /* Keyboard on-screen while writing: the last line needs free space under it,
    because that is the only room the caret can be scrolled into above the
-   keyboard. `has-keyboard` is set by main.js from the gap between the layout
-   and the visual viewport, so the space is gone the moment it closes. */
+   keyboard. The space sits between the text and the footer, not under the
+   footer, so the stats row and the donate link keep resting at the end of the
+   draft instead of hanging in the middle of the screen. `has-keyboard` is set
+   by main.js from the gap between the layout and the visual viewport. */
 
-body.has-keyboard.is-zen #writing-room:has(.writing-area:focus) .writing-column,
-body.has-keyboard.is-zen-flow #writing-room:has(.writing-area:focus) .writing-column {
-  padding-bottom: 40vh;
+body.has-keyboard.is-zen #writing-room:has(.writing-area:focus) .writing-stage,
+body.has-keyboard.is-zen-flow #writing-room:has(.writing-area:focus) .writing-stage {
+  margin-bottom: 40vh;
 }
 
 @media (max-width: 760px) {
@@ -3843,9 +3845,9 @@ body.has-keyboard.is-zen-flow #writing-room:has(.writing-area:focus) .writing-co
 
   /* Browsers without a visual viewport cannot tell when the keyboard opens,
      so they keep the space reserved for as long as the editor has focus. */
-  body:not(.can-track-keyboard).is-zen #writing-room:has(.writing-area:focus) .writing-column,
-  body:not(.can-track-keyboard).is-zen-flow #writing-room:has(.writing-area:focus) .writing-column {
-    padding-bottom: 40vh;
+  body:not(.can-track-keyboard).is-zen #writing-room:has(.writing-area:focus) .writing-stage,
+  body:not(.can-track-keyboard).is-zen-flow #writing-room:has(.writing-area:focus) .writing-stage {
+    margin-bottom: 40vh;
   }
 
   .tool-aside {
