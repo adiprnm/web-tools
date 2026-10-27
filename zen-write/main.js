@@ -3393,6 +3393,20 @@
       if (iconUse) iconUse.setAttribute("href", active ? "#i-fullscreen-exit" : "#i-fullscreen");
     }
 
+    // Keyboard on-screen: the visual viewport shrinks while the layout viewport
+    // keeps its height, so the gap between the two is what gives it away. The
+    // threshold skips the address bar and the safe area, which move the same
+    // viewport by a far smaller amount.
+    var KEYBOARD_MIN_INSET = 120;
+
+    function syncKeyboard() {
+      var viewport = window.visualViewport;
+      if (!viewport) return;
+
+      var inset = window.innerHeight - viewport.height - viewport.offsetTop;
+      document.body.classList.toggle("has-keyboard", inset > KEYBOARD_MIN_INSET);
+    }
+
     function syncZenViewport() {
       if (!document.body.classList.contains("is-zen")) return;
 
@@ -4766,7 +4780,12 @@
     });
 
     if (window.visualViewport) {
+      // Browsers that expose the visual viewport can report the keyboard; the
+      // stylesheet keeps a fallback for the ones that cannot.
+      document.body.classList.add("can-track-keyboard");
+
       window.visualViewport.addEventListener("resize", function () {
+        syncKeyboard();
         syncZenViewport();
         kickCaret();
         scheduleEnsureVisible();
@@ -5192,6 +5211,7 @@
     });
 
     window.addEventListener("resize", function () {
+      syncKeyboard();
       syncZenViewport();
       grow();
       scheduleRender();
@@ -5217,6 +5237,7 @@
       });
     }
 
+    syncKeyboard();
     boot();
     setZen(true);
   });

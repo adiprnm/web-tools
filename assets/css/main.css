@@ -3824,6 +3824,16 @@ body.is-zen-flow .writing-area {
    Responsive
    ------------------------------------------------------------ */
 
+/* Keyboard on-screen while writing: the last line needs free space under it,
+   because that is the only room the caret can be scrolled into above the
+   keyboard. `has-keyboard` is set by main.js from the gap between the layout
+   and the visual viewport, so the space is gone the moment it closes. */
+
+body.has-keyboard.is-zen #writing-room:has(.writing-area:focus) .writing-column,
+body.has-keyboard.is-zen-flow #writing-room:has(.writing-area:focus) .writing-column {
+  padding-bottom: 40vh;
+}
+
 @media (max-width: 760px) {
   body.is-zen #writing-room .writing-column,
   body.is-zen-flow #writing-room .writing-column {
@@ -3831,11 +3841,10 @@ body.is-zen-flow .writing-area {
     padding-top: calc(clamp(18px, 4vw, 44px) + 24px);
   }
 
-  /* Ruang ekstra di dasar hanya dibutuhkan selama menulis: itu tempat caret
-     bersembunyi di atas keyboard. Saat keyboard tertutup ruang itu cuma
-     terlihat sebagai halaman yang menggantung kosong. */
-  body.is-zen #writing-room:has(.writing-area:focus) .writing-column,
-  body.is-zen-flow #writing-room:has(.writing-area:focus) .writing-column {
+  /* Browsers without a visual viewport cannot tell when the keyboard opens,
+     so they keep the space reserved for as long as the editor has focus. */
+  body:not(.can-track-keyboard).is-zen #writing-room:has(.writing-area:focus) .writing-column,
+  body:not(.can-track-keyboard).is-zen-flow #writing-room:has(.writing-area:focus) .writing-column {
     padding-bottom: 40vh;
   }
 
