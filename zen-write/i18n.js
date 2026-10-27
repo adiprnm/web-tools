@@ -82,7 +82,6 @@
 
       "editor.placeholder": "Start writing…",
       "editor.label": "Writing area",
-      "stats.words": "words",
       "stats.chars": "characters",
       "stats.minutes": "min read",
       "donate.link": "Enjoying Zen Write? Buy me a coffee",
@@ -299,7 +298,6 @@
 
       "editor.placeholder": "Mulai menulis…",
       "editor.label": "Area tulisan",
-      "stats.words": "kata",
       "stats.chars": "karakter",
       "stats.minutes": "menit baca",
       "donate.link": "Suka Zen Write? Traktir saya jajan",
