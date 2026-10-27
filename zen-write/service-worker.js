@@ -1,19 +1,29 @@
-var CACHE_NAME = "zen-write-v35";
+---
+layout: null
+---
+{%- comment -%}
+  Skrip dan gaya diminta dengan penanda build di URL-nya. Itu yang
+  mencegah HTML baru bertemu main.js lama dari cache: setiap build punya
+  URL sendiri, jadi tidak ada versi yang bisa tertukar. Nama cache ikut
+  memakai penanda yang sama supaya cache lama dibuang saat activate.
+{%- endcomment -%}
+{%- capture build_stamp -%}{% include build-stamp.html %}{%- endcapture -%}
+var CACHE_NAME = "zen-write-{{ build_stamp }}";
 var APP_SHELL = [
   "/zen-write/",
-  "/zen-write/build.js",
-  "/zen-write/i18n.js",
-  "/zen-write/main.js",
-  "/zen-write/sync.js",
-  "/assets/js/qrcode.js",
+  "/zen-write/build.js?v={{ build_stamp }}",
+  "/zen-write/i18n.js?v={{ build_stamp }}",
+  "/zen-write/main.js?v={{ build_stamp }}",
+  "/zen-write/sync.js?v={{ build_stamp }}",
+  "/assets/js/qrcode.js?v={{ build_stamp }}",
   "/zen-write/manifest.json",
   "/zen-write/icon.svg",
   "/zen-write/icon-180.png",
   "/zen-write/icon-192.png",
   "/zen-write/icon-512.png",
   "/zen-write/icon-maskable-512.png",
-  "/assets/css/main.css",
-  "/assets/js/site.js",
+  "/assets/css/main.css?v={{ build_stamp }}",
+  "/assets/js/site.js?v={{ build_stamp }}",
   "/assets/fonts/archivo-latin.woff2",
   "/assets/fonts/azeret-mono-latin.woff2",
   "/assets/fonts/lora-latin.woff2",
@@ -64,7 +74,10 @@ self.addEventListener("fetch", function (event) {
 
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).then(function (response) {
+      // no-store: GitHub Pages mengirim max-age=600 untuk HTML, dan cache HTTP
+      // itu yang membuat tombol pembaruan terasa tidak melakukan apa-apa —
+      // navigasi tetap memutar dokumen lama walau cache aset sudah dihapus.
+      fetch(event.request, { cache: "no-store" }).then(function (response) {
         var copy = response.clone();
         event.waitUntil(
           caches.open(CACHE_NAME).then(function (cache) {

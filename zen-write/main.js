@@ -5239,6 +5239,12 @@
     var UPDATE_CHECK_INTERVAL = 60000;
     var UPDATE_CACHE_PREFIX = "zen-write-";
 
+    // Penanda dari tombol pembaruan hanya dipakai sekali untuk menembus cache
+    // HTTP; buang dari bilah alamat supaya tautan tetap bersih.
+    if (window.location.search.indexOf("v=") !== -1) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+    }
+
     function setUpdateLabel(state) {
       if (!updateButton) return;
       updateButton.dataset.state = state;
@@ -5310,7 +5316,13 @@
           return registration ? registration.update() : null;
         })
         .then(function () {
-          window.location.reload();
+          // Bukan reload biasa: GitHub Pages mengirim max-age panjang untuk
+          // HTML, jadi reload bisa memutar ulang dokumen lama dan tombolnya
+          // terasa tidak melakukan apa-apa. URL berpenanda belum pernah dilihat
+          // cache HTTP, jadi permintaan ini pasti sampai ke server.
+          var url = new URL(window.location.href);
+          url.searchParams.set("v", Date.now().toString(36));
+          window.location.replace(url.toString());
         })
         .catch(function () {
           updateBusy = false;

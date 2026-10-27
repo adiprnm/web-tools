@@ -19,6 +19,7 @@ image:
 twitter:
   card: summary_large_image
 ---
+{%- capture build_stamp -%}{% include build-stamp.html %}{%- endcapture -%}
 <div class="writing-room" id="writing-room">
   <button type="button" class="writing-toolbar-trigger" id="writing-toolbar-trigger" aria-label="Show writing tools" aria-expanded="false" aria-controls="writing-toolbar" title="Show writing tools" data-i18n-aria-label="toolbar.show" data-i18n-title="toolbar.show">
     <svg class="icon" aria-hidden="true"><use href="#i-grip"></use></svg>
@@ -504,8 +505,8 @@ twitter:
   </div>
 </dialog>
 
-<script src="{{ '/zen-write/i18n.js' | relative_url }}"></script>
-<script src="{{ '/zen-write/build.js' | relative_url }}" defer></script>
-<script src="{{ '/assets/js/qrcode.js' | relative_url }}" defer></script>
-<script src="{{ '/zen-write/sync.js' | relative_url }}" defer></script>
-<script src="{{ '/zen-write/main.js' | relative_url }}" defer></script>
+<script src="{{ '/zen-write/i18n.js' | relative_url }}?v={{ build_stamp }}"></script>
+<script src="{{ '/zen-write/build.js' | relative_url }}?v={{ build_stamp }}" defer></script>
+<script src="{{ '/assets/js/qrcode.js' | relative_url }}?v={{ build_stamp }}" defer></script>
+<script src="{{ '/zen-write/sync.js' | relative_url }}?v={{ build_stamp }}" defer></script>
+<script src="{{ '/zen-write/main.js' | relative_url }}?v={{ build_stamp }}" defer></script>
