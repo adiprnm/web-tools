@@ -1697,6 +1697,15 @@ textarea.input--mono {
 }
 
 .writing-room-inner {
+  display: block;
+}
+
+/* The measure lives here, on a child of the scroller rather than on the
+   scroller itself: that keeps the scrollbar at the edge of the window instead
+   of inside the 760px column, where it used to eat into the text width and
+   make the right padding look wider than the left. */
+
+.writing-column {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -2565,15 +2574,13 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   font-weight: 600;
 }
 
+/* `left` is set from the button's own position when the menu opens. */
 .writing-format-bubble .writing-format-menu {
   top: calc(100% + 6px);
-  right: 0;
 }
 
 .writing-format-bar .writing-format-menu {
   bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
 }
 
 .writing-format-btn:hover,
@@ -3590,18 +3597,17 @@ body.is-notes-open .notes-panel {
 /* Focused screen: a viewport-aware overlay, not the native Fullscreen API */
 
 body.is-zen #writing-room .writing-room-inner {
-  display: flex;
   flex: 1 1 auto;
-  flex-direction: column;
-  /* width: 100% matters now that this is a flex item: margin-inline: auto on a
-     flex item cancels the stretch, and the column would shrink to its content
-     instead of filling the frame. */
+  min-height: 0;
+  overflow: auto;
+}
+
+body.is-zen #writing-room .writing-column {
   width: 100%;
   max-width: 760px;
-  min-height: 0;
+  min-height: 100%;
   margin-inline: auto;
   padding: clamp(18px, 4vw, 44px);
-  overflow: auto;
 }
 
 body.is-zen .writing-stage {
@@ -3795,10 +3801,11 @@ body.is-zen-flow #writing-room {
   background: var(--paper);
 }
 
-body.is-zen-flow #writing-room .writing-room-inner {
-  display: flex;
-  flex-direction: column;
+body.is-zen-flow #writing-room .writing-column {
+  width: 100%;
+  max-width: 760px;
   min-height: 100vh;
+  margin-inline: auto;
   padding: clamp(18px, 4vw, 44px);
 }
 
@@ -3818,8 +3825,8 @@ body.is-zen-flow .writing-area {
    ------------------------------------------------------------ */
 
 @media (max-width: 760px) {
-  body.is-zen #writing-room .writing-room-inner,
-  body.is-zen-flow #writing-room .writing-room-inner {
+  body.is-zen #writing-room .writing-column,
+  body.is-zen-flow #writing-room .writing-column {
     /* Leave room for the hidden toolbar to slide over without covering text. */
     padding-top: calc(clamp(18px, 4vw, 44px) + 24px);
     padding-bottom: 40vh;

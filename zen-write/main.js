@@ -4329,7 +4329,9 @@
         return;
       }
 
-      if (linkFieldOpen() && document.activeElement && formatBubble.contains(document.activeElement)) {
+      if ((linkFieldOpen() || headingMenuOpen())
+        && document.activeElement
+        && formatBubble.contains(document.activeElement)) {
         return;
       }
 
@@ -4341,6 +4343,23 @@
     // the mirror has drawn the frame after the selection change. Waiting for a
     // frame first makes that order explicit instead of hoping the timer lands
     // after the render.
+    // A caret alone on a blank line has nothing to select, but it is exactly
+    // where a list, a quote or a heading usually begins. Treat it as an anchor
+    // of its own.
+    function caretOnBlankLine() {
+      if (area.selectionStart !== area.selectionEnd) return false;
+
+      var text = area.value;
+      var position = area.selectionStart;
+      var start = text.lastIndexOf("\n", Math.max(0, position - 1)) + 1;
+      var end = text.indexOf("\n", position);
+
+      if (end === -1) end = text.length;
+
+      return text.slice(start, position).trim() === ""
+        && text.slice(position, end).trim() === "";
+    }
+
     function scheduleBubble() {
       window.clearTimeout(bubbleTimer);
       window.clearTimeout(bubbleFallback);
@@ -4354,7 +4373,7 @@
         bubbleTimer = window.setTimeout(function () {
           bubbleTimer = null;
           syncBubble();
-        }, 120);
+        }, caretOnBlankLine() ? 520 : 120);
       }
 
       bubbleFrame = window.requestAnimationFrame(arm);
@@ -4375,15 +4394,23 @@
         return;
       }
 
-      // A command asked for the bubble explicitly: it has to exist before the
-      // link field inside it can take focus, even with a plain caret.
-      if (!force) {
+      // Focus that has moved inside the bubble (a menu row, the link field) is
+      // still ours: closing then would make the menu vanish the moment it is
+      // focused.
+      var inside = formatBubble.contains(document.activeElement);
+
+      var blank = caretOnBlankLine();
+
+      if (!force && !inside) {
         if (document.activeElement !== area) {
           hideBubble();
           return;
         }
 
-        if (area.selectionStart === area.selectionEnd) {
+        if (area.selectionStart === area.selectionEnd
+          && !blank
+          && !headingMenuOpen()
+          && !linkFieldOpen()) {
           hideBubble();
           return;
         }
@@ -4394,8 +4421,16 @@
       var probe = mirror.querySelector(".writing-caret-probe");
       var rect = probe ? probe.getBoundingClientRect() : null;
 
+      // The mirror is rebuilt on the next frame, so a caret that was just placed
+      // can be ahead of it. Draw now rather than anchor the bubble at a guess.
       if (!rect || (!rect.width && !rect.height)) {
-        if (!force || !stage) {
+        renderMirror();
+        probe = mirror.querySelector(".writing-caret-probe");
+        rect = probe ? probe.getBoundingClientRect() : null;
+      }
+
+      if (!rect || (!rect.width && !rect.height)) {
+        if ((!force && !blank) || !stage) {
           hideBubble();
           return;
         }
@@ -4453,7 +4488,7 @@
       if (formatBar.hidden !== !open) formatBar.hidden = !open;
 
       if (!open) {
-        closeHeadingMenu();
+        closeHeadingMenu("bar");
         return;
       }
 
@@ -4491,9 +4526,13 @@
       return !!((formatMenu && !formatMenu.hidden) || (formatBarMenu && !formatBarMenu.hidden));
     }
 
-    function closeHeadingMenu() {
+    function closeHeadingMenu(kind) {
       [formatMenu, formatBarMenu].forEach(function (menu) {
         if (!menu) return;
+        // Scoped closes exist because the bar syncs far more often than the
+        // bubble, and an unscoped close there would shut the desktop menu the
+        // moment it opened.
+        if (kind && menu !== menuFor(kind)) return;
         menu.hidden = true;
 
         var host = menu.parentNode;
@@ -4519,8 +4558,24 @@
 
       menu.hidden = false;
 
-      var button = menu.parentNode ? menu.parentNode.querySelector('[data-format="heading"]') : null;
-      if (button) button.setAttribute("aria-expanded", "true");
+      var host = menu.parentNode;
+      var button = host ? host.querySelector('[data-format="heading"]') : null;
+
+      if (button) {
+        button.setAttribute("aria-expanded", "true");
+
+        // Anchor the list under the button it belongs to, not under the edge of
+        // the surface, and keep it inside the surface when the button sits near
+        // a corner.
+        var hostRect = host.getBoundingClientRect();
+        var buttonRect = button.getBoundingClientRect();
+        var width = menu.offsetWidth;
+        var left = buttonRect.left - hostRect.left + buttonRect.width / 2 - width / 2;
+
+        left = Math.max(0, Math.min(left, host.clientWidth - width));
+        menu.style.left = Math.round(left) + "px";
+        menu.style.right = "auto";
+      }
 
       var checked = menu.querySelector('[aria-checked="true"]') || menu.querySelector("button");
       if (checked && checked.focus) checked.focus({ preventScroll: true });
