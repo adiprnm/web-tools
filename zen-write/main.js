@@ -89,7 +89,7 @@
     var toolbarTrigger = document.getElementById("writing-toolbar-trigger");
     var stage = document.getElementById("writing-stage");
     var mirror = document.getElementById("writing-mirror");
-    var charsEl = document.getElementById("writing-chars");
+    var wordsEl = document.getElementById("writing-words");
     var minutesEl = document.getElementById("writing-minutes");
     var savedEl = document.getElementById("writing-saved");
     var fullscreenButton = document.getElementById("writing-fullscreen");
@@ -1789,7 +1789,7 @@
       var text = area.value;
       var words = text.trim() ? text.trim().split(/\s+/).length : 0;
 
-      charsEl.textContent = text.length;
+      wordsEl.textContent = words;
       minutesEl.textContent = words ? Math.max(1, Math.ceil(words / WORDS_PER_MINUTE)) : 0;
     }
 
