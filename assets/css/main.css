@@ -2758,18 +2758,25 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   color: var(--danger-text);
 }
 
-/* Tawaran pembaruan: sama sunyinya dengan status simpan, dan hanya muncul
-   kalau aset di server sudah berbeda dari yang sedang berjalan. */
+/* Tawaran pembaruan: satu baris sunyi di atas tautan traktir, dan hanya
+   muncul kalau aset di server sudah berbeda dari yang sedang berjalan.
+   Tipografinya mengikuti tautan traktir supaya keduanya terbaca sebagai
+   penutup ruang tulis, bukan sebagai bagian dari baris statistik. */
 
 .writing-update {
+  display: block;
   appearance: none;
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
   border: 0;
   background: none;
-  font: inherit;
-  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.6;
+  color: var(--muted);
+  text-align: center;
   text-decoration: underline;
+  text-decoration-color: var(--line);
   text-decoration-style: dotted;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
@@ -2777,7 +2784,8 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 }
 
 .writing-update:hover {
-  color: var(--ink);
+  color: var(--accent-strong);
+  text-decoration-color: var(--accent);
 }
 
 .writing-update[disabled] {
