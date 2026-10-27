@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: "Archivo";
+    src: url("../../assets/fonts/archivo-latin.woff2") format("woff2");
+    font-weight: 400 800;
+  }
+  @font-face {
+    font-family: "JetBrains Mono";
+    src: url("../../assets/fonts/jetbrains-mono-latin.woff2") format("woff2");
+    font-weight: 400 700;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; }
+  body {
+    background: #f6efe3;
+    color: #2b2118;
+    font-family: "Archivo", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+  .masthead { position: absolute; top: 66px; left: 88px; display: flex; align-items: center; gap: 15px; }
+  .logo { display: block; width: 50px; height: 50px; }
+  .wordmark { font-size: 29px; font-weight: 650; letter-spacing: -0.015em; line-height: 1.1; }
+  .tagline { margin-top: 7px; font-size: 17px; font-weight: 400; color: #7b6853; letter-spacing: 0.005em; }
+  .prose {
+    position: absolute; top: 213px; left: 88px;
+    width: 900px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 42px;
+    line-height: 1.5;
+    letter-spacing: -0.012em;
+    color: #c8b89f;
+  }
+  .prose .focus { color: #2b2118; }
+  .caret {
+    display: inline-block;
+    width: 4px; height: 44px;
+    margin-left: 7px;
+    background: #c2551f;
+    transform: translateY(8px);
+  }
+  .foot {
+    position: absolute; bottom: 62px; left: 88px;
+    font-size: 14px; font-weight: 500; color: #7b6853;
+    letter-spacing: 0.02em;
+  }
+</style>
+</head>
+<body>
+  <div class="masthead">
+    <svg class="logo" viewBox="0 0 192 192" aria-hidden="true">
+      <rect width="192" height="192" fill="#2b2118"/>
+      <rect x="52" y="38" width="88" height="108" rx="4" fill="none" stroke="#f6efe3" stroke-width="8"/>
+      <path d="M70 70h52M70 92h52M70 114h30" fill="none" stroke="#f6efe3" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="132" cy="136" r="9" fill="#c2551f"/>
+    </svg>
+    <div>
+      <div class="wordmark">Zen Write</div>
+      <div class="tagline">A distraction-free writing room.</div>
+    </div>
+  </div>
+
+  <p class="prose"><span class="dim">The room is quiet. Nothing else</span><br>
+  <span class="dim">is open on the desk.</span><br>
+  <span class="focus">Only one sentence is still lit;<span class="caret"></span></span><br>
+  <span class="focus">the rest are waiting their turn.</span></p>
+
+  <div class="foot">tools.adipurnm.com/zen-write</div>
+</body>
+</html>

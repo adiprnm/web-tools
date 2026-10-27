@@ -1,0 +1,12 @@
+{
+  "name": "tools-og",
+  "private": true,
+  "type": "module",
+  "description": "Renders the Open Graph share cards for tools.adipurnm.com.",
+  "scripts": {
+    "render": "node render.js"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.1"
+  }
+}
