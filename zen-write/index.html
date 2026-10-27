@@ -69,7 +69,13 @@ twitter:
       <div class="writing-mirror" id="writing-mirror" aria-hidden="true"></div>
       <textarea class="writing-area" id="writing-area" spellcheck="true" lang="en" placeholder="Start writing…" aria-label="Writing area" data-i18n-placeholder="editor.placeholder" data-i18n-aria-label="editor.label"></textarea>
     </div>
+    </div>
+  </div>
 
+  <!-- Kaki ruang tulis sengaja di luar area scroll: baris statistik dan tautan
+       traktir duduk di tepi bawah kamar, di atas keyboard, bukan terangkat ke
+       tengah layar oleh ruang caret di dalam area gulir. -->
+  <div class="writing-foot">
     <div class="writing-stats">
       <span><strong id="writing-chars">0</strong> <span data-i18n="stats.chars">characters</span></span>
       <span><strong id="writing-minutes">0</strong> <span data-i18n="stats.minutes">min read</span></span>
@@ -77,7 +83,6 @@ twitter:
     </div>
 
     <a class="writing-donate" id="writing-donate" href="{{ site.coffee_url }}" target="_blank" rel="noopener" data-donate-en="{{ site.coffee_url }}" data-donate-id="{{ site.donate_url }}" data-i18n="donate.link">Enjoying Zen Write? Buy me a coffee</a>
-    </div>
   </div>
 
     <div class="writing-format-bar" id="writing-format-bar" role="toolbar" aria-orientation="horizontal" aria-label="Text formatting" data-i18n-aria-label="format.group" hidden>

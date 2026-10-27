@@ -2725,6 +2725,24 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   color: var(--muted);
 }
 
+/* Kaki ruang tulis: baris statistik dan tautan traktir. Di halaman biasa dia
+   mengikuti kolom tulis dengan jarak yang sama seperti jarak antar-item kolom.
+   Di mode fokus dia jadi baris terakhir kamar, di luar area gulir, supaya ruang
+   caret tidak mengangkatnya ke tengah layar. */
+
+.writing-foot {
+  margin-top: 14px;
+}
+
+body.is-zen #writing-room .writing-foot,
+body.is-zen-flow #writing-room .writing-foot {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 clamp(18px, 4vw, 44px) clamp(18px, 4vw, 44px);
+}
+
 .writing-stats strong {
   font-weight: 500;
   color: var(--ink-soft);
