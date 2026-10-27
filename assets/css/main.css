@@ -3834,6 +3834,18 @@ body.has-keyboard.is-zen-flow #writing-room:has(.writing-area:focus) .writing-co
   padding-bottom: 40vh;
 }
 
+/* Kaki ruang tulis ikut mengalah saat keyboard terbuka. Dengan ruang caret di
+   bawahnya, baris statistik dan tautan traktir akan menggantung di tengah
+   layar, jauh dari teks yang sedang ditulis. Keduanya kembali begitu keyboard
+   ditutup, bersama ruang caret itu. */
+
+body.has-keyboard.is-zen .writing-stats,
+body.has-keyboard.is-zen-flow .writing-stats,
+body.has-keyboard.is-zen .writing-donate,
+body.has-keyboard.is-zen-flow .writing-donate {
+  display: none;
+}
+
 @media (max-width: 760px) {
   body.is-zen #writing-room .writing-column,
   body.is-zen-flow #writing-room .writing-column {
