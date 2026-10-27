@@ -84,6 +84,7 @@
     if (!area) return;
 
     var room = document.getElementById("writing-room");
+    var roomInner = room ? room.querySelector(".writing-room-inner") : null;
     var toolbar = document.getElementById("writing-toolbar");
     var toolbarTrigger = document.getElementById("writing-toolbar-trigger");
     var stage = document.getElementById("writing-stage");
@@ -1877,7 +1878,7 @@
        swap. No glyph advance changes, so the caret never drifts. */
 
     var markdownCache = { text: null, model: null };
-    var ESCAPABLE = "\\`*_{}[]()#+-.!~<>";
+    var ESCAPABLE = "\\`*_{}[]()#-.!~<>";
 
     // A list line: optional blockquote prefix, up to any indentation, a bullet
     // (- * +) or an ordered marker (1. 1)), then at least one space or the end
@@ -1955,7 +1956,50 @@
             var markerEnd = position + match[0].length;
             overlays.push({ start: position, end: markerEnd, classes: ["md-marker"] });
             if (lineEnd > markerEnd) {
-              overlays.push({ start: markerEnd, end: lineEnd, classes: ["md-heading"] });
+              // The level class only grades the stroke weight: the mirror has to
+              // keep the same character grid as the textarea.
+              overlays.push({
+                start: markerEnd,
+                end: lineEnd,
+                classes: ["md-heading", "md-h" + match[1].length]
+              });
+            }
+          }
+        }
+
+        if (newline === -1) break;
+        position = newline + 1;
+      }
+
+      return overlays;
+    }
+
+    function scanQuotes(text, fences) {
+      var overlays = [];
+      var position = 0;
+      var fenceIndex = 0;
+      var QUOTE_LINE = /^ {0,3}((?:>[ \t]?)+)/;
+
+      while (position <= text.length) {
+        var newline = text.indexOf("\n", position);
+        var lineEnd = newline === -1 ? text.length : newline;
+
+        while (fenceIndex < fences.length && fences[fenceIndex].end <= position) fenceIndex += 1;
+
+        var inFence = fenceIndex < fences.length
+          && fences[fenceIndex].start <= position
+          && position < fences[fenceIndex].end;
+
+        if (!inFence) {
+          var match = QUOTE_LINE.exec(text.slice(position, lineEnd));
+
+          if (match) {
+            var markerEnd = position + match[0].length;
+
+            overlays.push({ start: position, end: markerEnd, classes: ["md-marker"] });
+
+            if (lineEnd > markerEnd) {
+              overlays.push({ start: markerEnd, end: lineEnd, classes: ["md-quote"] });
             }
           }
         }
@@ -2167,10 +2211,6 @@
         return matchEmphasis(text, start, to, "~~", ["md-strike"]);
       }
 
-      if (char === "+" && text.charAt(start + 1) === "+") {
-        return matchEmphasis(text, start, to, "++", ["md-underline"]);
-      }
-
       if (char === "*" || char === "_") {
         if (text.charAt(start + 1) === char && text.charAt(start + 2) === char) {
           var triple = matchEmphasis(text, start, to, repeatChar(char, 3), ["md-strong", "md-em"]);
@@ -2260,7 +2300,9 @@
       var fences = fenceRanges(text);
       var model = {
         runs: inlineRuns(text, fences),
-        overlays: scanHeadings(text, fences).concat(scanLists(text, fences))
+        overlays: scanHeadings(text, fences)
+          .concat(scanQuotes(text, fences))
+          .concat(scanLists(text, fences))
       };
 
       markdownCache.text = text;
@@ -2514,7 +2556,6 @@
       { marker: "**", open: "<strong>", close: "</strong>" },
       { marker: "__", open: "<strong>", close: "</strong>" },
       { marker: "~~", open: "<del>", close: "</del>" },
-      { marker: "++", open: "<ins>", close: "</ins>" },
       { marker: "*", open: "<em>", close: "</em>" },
       { marker: "_", open: "<em>", close: "</em>" }
     ];
@@ -3022,16 +3063,20 @@
       window.clearTimeout(toolbarHideTimer);
       toolbarHideTimer = null;
       if (next) armToolbarHide(hideDelay);
+      syncFormatBar();
     }
 
     function revealToolbar() {
       window.clearTimeout(zenHintTimer);
       zenHintTimer = null;
+      hideBubble();
       setToolbarRevealed(true);
     }
 
+    // The room is the fixed frame; the column inside it is what scrolls, so
+    // that the formatting bar stays outside the scroll flow.
     function scrollContainer() {
-      return document.body.classList.contains("is-zen") ? room : null;
+      return document.body.classList.contains("is-zen") ? roomInner : null;
     }
 
     function instantScrollBy(delta) {
@@ -3070,6 +3115,12 @@
       var safeTop = Math.max(viewTop + 12, toolbarRect.bottom + 16);
       var safeBottom = viewBottom - 32;
       var delta = 0;
+
+      // The mobile formatting bar sits on the top edge of the keyboard, so the
+      // caret has to stop below it instead of sliding underneath.
+      if (formatBar && !formatBar.hidden) {
+        safeBottom = Math.min(safeBottom, formatBar.getBoundingClientRect().top - 16);
+      }
 
       if (rect.top < safeTop) {
         delta = rect.top - safeTop;
@@ -3257,6 +3308,7 @@
       syncToolbarLabel();
       updateFullscreenButton();
       syncFontChoices();
+      syncFormatTitles();
       setSaved(lastSavedKey);
     }
 
@@ -3353,10 +3405,17 @@
 
       // visualViewport can scroll every frame; rewriting the same box would
       // invalidate layout each time, so only touch the styles when they move.
+      // The inline styles are checked too: the cached box alone would never
+      // notice a frame that drifted away from it, and everything anchored to
+      // the frame would silently follow it off the edge.
       if (box.top === viewportBox.top
         && box.left === viewportBox.left
         && box.width === viewportBox.width
-        && box.height === viewportBox.height) {
+        && box.height === viewportBox.height
+        && room.style.top === box.top + "px"
+        && room.style.left === box.left + "px"
+        && room.style.width === box.width + "px"
+        && room.style.height === box.height + "px") {
         return;
       }
 
@@ -3542,11 +3601,1035 @@
       scheduleRender();
     }
 
+    /* Markdown formatting
+       ----------------------------------------------------------
+       The editor is a plain <textarea> and the mirror draws the markdown, so
+       a formatting command only has to write the markers. Every command goes
+       through one native insertion, which keeps the browser's undo history at
+       one step per press instead of one step per marker.
+
+       There are two shapes for the same four commands:
+         - a bubble that hangs off the selection, for a mouse or a pen
+         - a bar above the virtual keyboard, for a finger
+       A touch screen brings its own selection menu and it cannot be turned
+       off, so on a finger the buttons get out of its way instead of racing it
+       for the space above the selection. */
+
+    var formatBubble = document.getElementById("writing-format-bubble");
+    var formatBubbleLink = document.getElementById("writing-format-link");
+    var formatBubbleInput = document.getElementById("writing-format-link-input");
+    var formatBar = document.getElementById("writing-format-bar");
+    var formatBarLink = document.getElementById("writing-format-bar-link");
+    var formatBarInput = document.getElementById("writing-format-bar-link-input");
+    var formatButtons = Array.prototype.slice.call(document.querySelectorAll("[data-format]"));
+    var formatMenu = document.getElementById("writing-format-menu");
+    var formatBarMenu = document.getElementById("writing-format-menu-bar");
+    var formatMenuItems = Array.prototype.slice.call(document.querySelectorAll("[data-level]"));
+
+    var HEADING_PREFIX = /^ {0,3}(#{1,6})(?:[ \t]+|$)/;
+    var LINK_PATTERN = /\[[^\]\n]*\]\([^)\s]*\)/g;
+    var IMAGE_PATTERN = /!\[[^\]\n]*\]\([^)\s]*\)/g;
+    var imageMode = false;
+
+    var rememberedRange = { from: 0, to: 0 };
+    var bubbleTimer = null;
+    var bubbleFrame = 0;
+    var bubbleFallback = 0;
+    var FORMAT_SETTLE_DELAYS = [60, 180, 360, 700];
+    var FORMAT_KEYBOARD_SHOW = 140;
+    var FORMAT_KEYBOARD_HIDE = 80;
+
+    // The last pointer decides, not the user agent: a tablet with a trackpad
+    // gets the bubble, a laptop with a touch screen gets the bar the moment a
+    // finger lands on it.
+    var lastPointerType = window.matchMedia && window.matchMedia("(pointer: coarse)").matches
+      ? "touch"
+      : "mouse";
+
+    document.addEventListener("pointerdown", function (event) {
+      if (event.pointerType) lastPointerType = event.pointerType;
+
+      // Tapping the writing surface re-measures right away so the bar is there
+      // before the keyboard finishes animating in.
+      if (!formatBar) return;
+
+      var target = event.target;
+      if (!target) return;
+
+      // A menu that was left open should not survive a tap somewhere else.
+      if (headingMenuOpen()
+        && !(target.closest && target.closest(".writing-format-menu"))
+        && !(target.closest && target.closest('[data-format="heading"]'))) {
+        closeHeadingMenu();
+      }
+
+      if (!area.contains(target) && !(stage && stage.contains(target))) return;
+      if (!formatBar.hidden) syncFormatBar();
+    }, true);
+
+    function usesTouchUI() {
+      return lastPointerType === "touch";
+    }
+
+    /* "Is the keyboard open?" has no answer on the web. The only usable signal
+       is the visual viewport shrinking below the layout viewport, and it is a
+       guess: a hardware keyboard shows nothing, a split keyboard changes
+       nothing, and a pinch zoom looks exactly like a keyboard. Pinch zoom is
+       filtered out by scale, and the two thresholds give the show/hide decision
+       some hysteresis so it does not flicker while the keyboard animates.
+       When the guess is wrong the bar simply falls back to the focus rule. */
+
+    var keyboardWasOpen = false;
+
+    function keyboardIsOpen() {
+      var viewport = window.visualViewport;
+
+      if (!viewport) return false;
+      if (viewport.scale > 1.01) {
+        keyboardWasOpen = false;
+        return false;
+      }
+
+      var inset = window.innerHeight - (viewport.offsetTop + viewport.height);
+
+      keyboardWasOpen = keyboardWasOpen
+        ? inset > FORMAT_KEYBOARD_HIDE
+        : inset > FORMAT_KEYBOARD_SHOW;
+
+      return keyboardWasOpen;
+    }
+
+    function shortcutName() {
+      var platform = (navigator.userAgentData && navigator.userAgentData.platform)
+        || navigator.platform
+        || navigator.userAgent;
+      return /Mac|iPhone|iPad|iPod/i.test(platform) ? "⌘" : "Ctrl";
+    }
+
+    /* Selection memory
+       Tapping a button outside the textarea blurs it, and a blur takes the
+       selection with it. The range is remembered while typing and put back
+       before a command runs, so the buttons work even when the browser has
+       already dropped the highlight. */
+
+    function rememberRange() {
+      if (document.activeElement !== area) return;
+      rememberedRange.from = area.selectionStart;
+      rememberedRange.to = area.selectionEnd;
+    }
+
+    function commandRange() {
+      var blurred = document.activeElement !== area;
+
+      if (blurred) area.focus({ preventScroll: true });
+      if (blurred && rememberedRange.to > rememberedRange.from) {
+        area.setSelectionRange(rememberedRange.from, rememberedRange.to);
+      }
+
+      return { from: area.selectionStart, to: area.selectionEnd };
+    }
+
+    function applyEdit(from, to, insert, selFrom, selTo) {
+      var applied = false;
+
+      area.setSelectionRange(from, to);
+
+      try {
+        applied = insert
+          ? document.execCommand("insertText", false, insert)
+          : document.execCommand("delete", false, null);
+      } catch (error) {
+        applied = false;
+      }
+
+      if (!applied) {
+        area.value = area.value.slice(0, from) + insert + area.value.slice(to);
+        area.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+
+      if (selFrom === undefined || selFrom === null) selFrom = from + insert.length;
+      if (selTo === undefined || selTo === null) selTo = selFrom;
+
+      area.setSelectionRange(selFrom, selTo);
+      rememberedRange.from = selFrom;
+      rememberedRange.to = selTo;
+
+      kickCaret();
+      scheduleRender();
+      syncFormatState();
+      syncFormatTitles();
+      syncFormatBar();
+      scheduleBubble();
+    }
+
+    /* Inline markers
+       The plan for a press is computed from the text around the selection, so
+       pressing the same button twice puts the text back the way it was. */
+
+    function wrapPlan(text, from, to, marker) {
+      var length = marker.length;
+      var selected = text.slice(from, to);
+      var before = text.slice(from - length, from);
+      var after = text.slice(to, to + length);
+      var wrap = {
+        from: from,
+        to: to,
+        insert: marker + selected + marker,
+        selFrom: from + length,
+        selTo: to + length
+      };
+
+      if (!selected) {
+        // A caret parked inside an empty pair closes the pair instead of
+        // stacking a second one on top of it.
+        if (before === marker && after === marker) {
+          return { from: from - length, to: to + length, insert: "", selFrom: from - length, selTo: from - length };
+        }
+        return wrap;
+      }
+
+      // Italic has to tell bold apart from a single asterisk, otherwise bolding
+      // a word would look like italics to the next press.
+      if (marker === "*") {
+        if (text.slice(from - 3, from) === "***" && text.slice(to, to + 3) === "***") {
+          return { from: from - 3, to: to + 3, insert: "**" + selected + "**", selFrom: from - 2, selTo: to - 2 };
+        }
+        if (text.slice(from - 2, from) === "**" && text.slice(to, to + 2) === "**") {
+          return { from: from - 2, to: to + 2, insert: "***" + selected + "***", selFrom: from + 1, selTo: to + 1 };
+        }
+      }
+
+      if (before === marker && after === marker) {
+        return { from: from - length, to: to + length, insert: selected, selFrom: from - length, selTo: to - length };
+      }
+
+      if (to - from >= length * 2
+        && text.slice(from, from + length) === marker
+        && text.slice(to - length, to) === marker) {
+        return { from: from, to: to, insert: selected.slice(length, selected.length - length), selFrom: from, selTo: to - length * 2 };
+      }
+
+      return wrap;
+    }
+
+    function applyWrap(marker) {
+      var range = commandRange();
+      var plan = wrapPlan(area.value, range.from, range.to, marker);
+      applyEdit(plan.from, plan.to, plan.insert, plan.selFrom, plan.selTo);
+    }
+
+    /* Headings
+       Line level, not character level: every line the selection touches is
+       rewritten in one edit, so a multi-line selection is still one undo. */
+
+    function headingLevel(line) {
+      var match = HEADING_PREFIX.exec(line);
+      return match ? match[1].length : 0;
+    }
+
+    function blockRange(text, range) {
+      var end = text.indexOf("\n", range.to);
+      return {
+        start: text.lastIndexOf("\n", Math.max(0, range.from - 1)) + 1,
+        end: end === -1 ? text.length : end
+      };
+    }
+
+    // Read-only: reading the level must never pull focus back into the editor,
+    // because this also runs at boot and while the notes panel is open.
+    function currentHeadingLevel() {
+      var text = area.value;
+      var range = { from: area.selectionStart, to: area.selectionEnd };
+      var block = blockRange(text, range);
+      var lines = text.slice(block.start, block.end).split("\n");
+
+      for (var i = 0; i < lines.length; i += 1) {
+        var level = headingLevel(lines[i]);
+        if (level) return Math.min(level, 6);
+      }
+
+      return 0;
+    }
+
+    // Every line-level command has the same shape: rewrite the touched block as
+    // one string (so the whole change is a single undo step), then map the
+    // selection offsets through the rewritten lines.
+    function blockLines() {
+      var range = commandRange();
+      var text = area.value;
+      var block = blockRange(text, range);
+      var lines = text.slice(block.start, block.end).split("\n");
+      var offsets = [];
+      var cursor = block.start;
+
+      lines.forEach(function (line) {
+        offsets.push(cursor);
+        cursor += line.length + 1;
+      });
+
+      return { range: range, text: text, block: block, lines: lines, offsets: offsets };
+    }
+
+    function rewriteBlock(lines, offsets, build) {
+      var shifts = [];
+      var rebuiltLines = lines.map(function (line, index) {
+        var value = build(line, index);
+        shifts[index] = value.length - line.length;
+        return value;
+      });
+
+      var rebuilt = rebuiltLines.join("\n");
+      if (rebuilt === lines.join("\n")) return false;
+
+      var shiftBefore = [];
+      var running = 0;
+
+      shifts.forEach(function (shift, index) {
+        shiftBefore[index] = running;
+        running += shift;
+      });
+
+      function mapOffset(position) {
+        var index = 0;
+
+        for (var i = offsets.length - 1; i >= 0; i -= 1) {
+          if (position >= offsets[i]) {
+            index = i;
+            break;
+          }
+        }
+
+        var line = lines[index];
+        var newLength = line.length + shifts[index];
+        var inner = Math.min(position - offsets[index], line.length);
+
+        inner = Math.max(0, Math.min(inner + shifts[index], newLength));
+        return offsets[index] + shiftBefore[index] + inner;
+      }
+
+      var range = commandRange();
+      applyEdit(offsets[0], offsets[offsets.length - 1] + lines[lines.length - 1].length,
+        rebuilt, mapOffset(range.from), mapOffset(range.to));
+      return true;
+    }
+
+    function setHeading(level) {
+      var view = blockLines();
+      var levels = view.lines.map(headingLevel);
+      var uniform = levels.every(function (value) { return value === levels[0]; }) ? levels[0] : 0;
+      var next = uniform === level ? 0 : level;
+
+      rewriteBlock(view.lines, view.offsets, function (line) {
+        var rest = line.replace(HEADING_PREFIX, "");
+        return next && rest.trim() ? "#".repeat(next) + " " + rest : rest;
+      });
+    }
+
+    function listKind(marker) {
+      return /^[-*+]$/.test(marker) ? "ul" : "ol";
+    }
+
+    function currentListKind() {
+      var text = area.value;
+      var block = blockRange(text, { from: area.selectionStart, to: area.selectionEnd });
+      var lines = text.slice(block.start, block.end).split("\n");
+
+      for (var i = 0; i < lines.length; i += 1) {
+        if (!lines[i].trim()) continue;
+
+        var match = matchListLine(lines[i]);
+        if (!match) return "";
+        return listKind(match.marker);
+      }
+
+      return "";
+    }
+
+    function setList(kind) {
+      var view = blockLines();
+      var filled = view.lines.filter(function (line) { return line.trim(); });
+      var uniform = filled.length > 0 && filled.every(function (line) {
+        var match = matchListLine(line);
+        return match ? listKind(match.marker) === kind : false;
+      });
+
+      // A blank line is where a list usually starts, so pressing the button
+      // there has to open one instead of quietly doing nothing.
+      var emptyBlock = !filled.length;
+      var number = 0;
+
+      rewriteBlock(view.lines, view.offsets, function (line, index) {
+        if (emptyBlock) {
+          if (index > 0) return line;
+          return kind === "ul" ? "- " : "1. ";
+        }
+
+        if (!line.trim()) return line;
+
+        var match = matchListLine(line);
+        var keep = match ? match.quote + match.indent : "";
+        var rest = (match ? line.slice(match.contentOffset) : line).replace(/^[ \t]+/, "");
+        var marker = "";
+
+        if (!uniform) {
+          number += 1;
+          marker = kind === "ul" ? "- " : number + ". ";
+        }
+
+        return keep + marker + rest;
+      });
+    }
+
+    function currentLineQuoted() {
+      var text = area.value;
+      var block = blockRange(text, { from: area.selectionStart, to: area.selectionEnd });
+      var lines = text.slice(block.start, block.end).split("\n");
+
+      for (var i = 0; i < lines.length; i += 1) {
+        if (!lines[i].trim()) continue;
+        return /^ {0,3}>/.test(lines[i]);
+      }
+
+      return false;
+    }
+
+    function setQuote() {
+      var view = blockLines();
+      var filled = view.lines.filter(function (line) { return line.trim(); });
+      var uniform = filled.length > 0 && filled.every(function (line) {
+        return /^ {0,3}>/.test(line);
+      });
+
+      rewriteBlock(view.lines, view.offsets, function (line) {
+        if (!line.trim()) return uniform ? line : "> " + line;
+
+        var rest = line.replace(/^ {0,3}(?:>[ \t]?)+/, "");
+        return uniform ? rest : "> " + rest;
+      });
+    }
+
+    function applyCode() {
+      var range = commandRange();
+      var text = area.value;
+      var selected = text.slice(range.from, range.to);
+
+      // A selection that spans lines is a block, not a phrase.
+      if (selected.indexOf("\n") === -1) {
+        applyWrap("`");
+        return;
+      }
+
+      if (text.slice(range.from - 4, range.from) === "```\n"
+        && text.slice(range.to, range.to + 4) === "\n```") {
+        applyEdit(range.from - 4, range.to + 4, selected, range.from - 4, range.from - 4 + selected.length);
+        return;
+      }
+
+      applyEdit(range.from, range.to, "```\n" + selected + "\n```",
+        range.from + 4, range.from + 4 + selected.length);
+    }
+
+    /* Links */
+
+    function looksLikeLink(value) {
+      var text = String(value || "").trim();
+
+      return /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(text)
+        || /^www\.\S+$/i.test(text)
+        || /^\S+@\S+\.\S+$/.test(text);
+    }
+
+    function normalizeHref(value) {
+      var url = String(value || "").trim();
+
+      if (!url) return "";
+      if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return url;
+      if (url.charAt(0) === "/" || url.charAt(0) === "#") return url;
+      if (url.indexOf("@") > 0 && url.indexOf("/") === -1) return "mailto:" + url;
+      return "https://" + url;
+    }
+
+    function linkRangeAt(text, position) {
+      var match;
+
+      LINK_PATTERN.lastIndex = 0;
+
+      while ((match = LINK_PATTERN.exec(text))) {
+        var end = match.index + match[0].length;
+
+        if (position < match.index || position > end) continue;
+
+        var split = match[0].indexOf("](");
+        if (split === -1) continue;
+
+        return {
+          start: match.index,
+          end: end,
+          label: match[0].slice(1, split),
+          href: match[0].slice(split + 2, match[0].length - 1)
+        };
+      }
+
+      return null;
+    }
+
+    function imageRangeAt(text, position) {
+      IMAGE_PATTERN.lastIndex = 0;
+
+      var match;
+
+      while ((match = IMAGE_PATTERN.exec(text))) {
+        var end = match.index + match[0].length;
+
+        if (position < match.index || position > end) continue;
+
+        var split = match[0].indexOf("](");
+        if (split === -1) continue;
+
+        return {
+          start: match.index,
+          end: end,
+          alt: match[0].slice(2, split),
+          src: match[0].slice(split + 2, match[0].length - 1)
+        };
+      }
+
+      return null;
+    }
+
+    function normalizeImageSrc(value) {
+      var url = String(value || "").trim();
+
+      if (!url) return "";
+      if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return url;
+      if (url.charAt(0) === "/" || url.charAt(0) === "#") return url;
+      return "https://" + url;
+    }
+
+    // An image is the same gesture as a link, only the marker in front differs,
+    // so the field and its surrounding handling are shared.
+    function applyImage(raw) {
+      var src = normalizeImageSrc(raw);
+      if (!src) return;
+
+      var range = commandRange();
+      var text = area.value;
+      var existing = imageRangeAt(text, range.from);
+
+      if (existing) {
+        var alt = existing.alt || t("format.imageWord");
+        var replaced = "![" + alt + "](" + src + ")";
+
+        applyEdit(existing.start, existing.end, replaced, existing.start + 2, existing.start + 2 + alt.length);
+        return;
+      }
+
+      var selected = text.slice(range.from, range.to);
+      var label = selected;
+
+      if (looksLikeLink(selected)) {
+        src = normalizeImageSrc(selected);
+        label = "";
+      }
+      if (!label) label = t("format.imageWord");
+
+      var insert = "![" + label + "](" + src + ")";
+      applyEdit(range.from, range.to, insert, range.from + 2, range.from + 2 + label.length);
+    }
+
+    function applyLink(raw) {
+      var href = normalizeHref(raw);
+      if (!href) return;
+
+      var range = commandRange();
+      var text = area.value;
+      var existing = linkRangeAt(text, range.from);
+
+      // A caret already inside a link edits that link instead of nesting a
+      // second one around it.
+      if (existing) {
+        var label = existing.label || existing.href;
+        var link = "[" + label + "](" + href + ")";
+
+        applyEdit(existing.start, existing.end, link, existing.start + 1, existing.start + 1 + label.length);
+        return;
+      }
+
+      var selected = text.slice(range.from, range.to);
+
+      if (!selected) {
+        var word = t("format.linkWord");
+        var seed = "[" + word + "](" + href + ")";
+
+        applyEdit(range.from, range.to, seed, range.from + 1, range.from + 1 + word.length);
+        return;
+      }
+
+      if (looksLikeLink(selected)) href = normalizeHref(selected);
+
+      var wrapped = "[" + selected + "](" + href + ")";
+      applyEdit(range.from, range.to, wrapped, range.from + 1, range.from + 1 + selected.length);
+    }
+
+    /* Link field
+       A dialog would be the wrong shape here: it takes the page away. The
+       field grows out of the same surface as the buttons and disappears with
+       them. */
+
+    function linkFieldParts(kind) {
+      return kind === "bar"
+        ? { form: formatBarLink, input: formatBarInput, host: formatBar }
+        : { form: formatBubbleLink, input: formatBubbleInput, host: formatBubble };
+    }
+
+    function linkFieldOpen() {
+      return !!((formatBubbleLink && !formatBubbleLink.hidden)
+        || (formatBarLink && !formatBarLink.hidden));
+    }
+
+    function openLinkField(kind, mode) {
+      var parts = linkFieldParts(kind);
+      if (!parts.form || !parts.input) return;
+
+      imageMode = mode === "image";
+
+      var range = commandRange();
+      var text = area.value;
+      var existing = imageMode ? imageRangeAt(text, range.from) : linkRangeAt(text, range.from);
+      var selected = text.slice(range.from, range.to);
+      var preset = "";
+
+      if (existing) preset = imageMode ? existing.src : existing.href;
+      else if (looksLikeLink(selected)) preset = selected;
+
+      parts.input.setAttribute("placeholder", t(imageMode ? "format.imagePlaceholder" : "format.linkPlaceholder"));
+      parts.input.setAttribute("aria-label", t(imageMode ? "format.image" : "format.linkAddress"));
+
+      parts.form.hidden = false;
+      if (parts.host) parts.host.classList.add("is-linking");
+      // The field can only take focus once its container is on screen.
+      if (kind === "bubble") syncBubble(true);
+      parts.input.value = preset;
+      parts.input.focus({ preventScroll: true });
+      parts.input.setSelectionRange(0, preset.length);
+      syncFormatBar();
+    }
+
+    function closeLinkField(kind) {
+      var parts = linkFieldParts(kind);
+
+      if (parts.form) {
+        parts.form.hidden = true;
+        if (parts.form.reset) parts.form.reset();
+      }
+      if (parts.host) parts.host.classList.remove("is-linking");
+    }
+
+    function commitLink(kind) {
+      var parts = linkFieldParts(kind);
+      var value = parts.input ? parts.input.value : "";
+      var image = imageMode;
+
+      closeLinkField(kind);
+      if (image) applyImage(value);
+      else applyLink(value);
+      imageMode = false;
+      hideBubble();
+      syncFormatBar();
+    }
+
+    /* The two surfaces */
+
+    function formatSurfaceVisible() {
+      return !!((formatBubble && !formatBubble.hidden) || (formatBar && !formatBar.hidden));
+    }
+
+    function setFormatPressed(name, pressed) {
+      formatButtons.forEach(function (button) {
+        if (button.getAttribute("data-format") === name) {
+          button.setAttribute("aria-pressed", String(!!pressed));
+        }
+      });
+    }
+
+    function syncFormatState() {
+      if (document.activeElement !== area) return;
+      if (!formatSurfaceVisible()) return;
+
+      var runs = markdownModel(area.value).runs;
+      var position = area.selectionStart;
+      var strong = false;
+      var em = false;
+      var code = false;
+      var strike = false;
+
+      for (var i = 0; i < runs.length; i += 1) {
+        var run = runs[i];
+
+        if (position < run.start || position >= run.end) continue;
+
+        strong = run.classes.indexOf("md-strong") !== -1;
+        em = run.classes.indexOf("md-em") !== -1;
+        code = run.classes.indexOf("md-code") !== -1;
+        strike = run.classes.indexOf("md-strike") !== -1;
+        break;
+      }
+
+      var level = currentHeadingLevel();
+      var list = currentListKind();
+
+      setFormatPressed("bold", strong);
+      setFormatPressed("italic", em);
+      setFormatPressed("strike", strike);
+      setFormatPressed("ul", list === "ul");
+      setFormatPressed("ol", list === "ol");
+      setFormatPressed("code", code);
+      setFormatPressed("quote", currentLineQuoted());
+      setFormatPressed("image", !!imageRangeAt(area.value, position));
+      syncHeadingMenu(level);
+    }
+
+    // Shortcuts belong in the tooltip, not in the dictionary: the modifier
+    // differs per platform while the label does not.
+    function syncFormatTitles() {
+      var modifier = shortcutName();
+
+      var titles = {
+        bold: t("format.boldTitle") + " (" + modifier + "+B)",
+        italic: t("format.italicTitle") + " (" + modifier + "+I)",
+        quote: t("format.quoteTitle"),
+        strike: t("format.strikeTitle"),
+        heading: t("format.headingTitle") + " (" + modifier + "+Alt+1-3)",
+        ul: t("format.ulTitle"),
+        ol: t("format.olTitle"),
+        code: t("format.codeTitle"),
+        link: t("format.linkTitle") + " (" + modifier + "+Shift+K)",
+        image: t("format.imageTitle")
+      };
+
+      formatButtons.forEach(function (button) {
+        var name = button.getAttribute("data-format");
+        if (!titles[name]) return;
+
+        button.setAttribute("title", titles[name]);
+        button.setAttribute("aria-label", t("format." + name));
+      });
+    }
+
+    function hideBubble() {
+      window.clearTimeout(bubbleTimer);
+      bubbleTimer = null;
+      if (bubbleFrame) window.cancelAnimationFrame(bubbleFrame);
+      bubbleFrame = 0;
+      window.clearTimeout(bubbleFallback);
+      bubbleFallback = 0;
+
+      if (!formatBubble || formatBubble.hidden) {
+        if (formatBubble) closeLinkField("bubble");
+        return;
+      }
+
+      if (linkFieldOpen() && document.activeElement && formatBubble.contains(document.activeElement)) {
+        return;
+      }
+
+      closeLinkField("bubble");
+      formatBubble.hidden = true;
+    }
+
+    // The bubble is measured against the caret probe, which only exists once
+    // the mirror has drawn the frame after the selection change. Waiting for a
+    // frame first makes that order explicit instead of hoping the timer lands
+    // after the render.
+    function scheduleBubble() {
+      window.clearTimeout(bubbleTimer);
+      window.clearTimeout(bubbleFallback);
+      if (bubbleFrame) window.cancelAnimationFrame(bubbleFrame);
+
+      function arm() {
+        bubbleFrame = 0;
+        window.clearTimeout(bubbleFallback);
+        bubbleFallback = 0;
+        window.clearTimeout(bubbleTimer);
+        bubbleTimer = window.setTimeout(function () {
+          bubbleTimer = null;
+          syncBubble();
+        }, 120);
+      }
+
+      bubbleFrame = window.requestAnimationFrame(arm);
+      // A hidden tab stops producing frames, and the bubble should not wait on
+      // a paint that may never come.
+      bubbleFallback = window.setTimeout(arm, 400);
+    }
+
+    function syncBubble(force) {
+      if (!formatBubble) return;
+
+      if (usesTouchUI()
+        || hasOpenDialog()
+        || isPanelOpen()
+        || previewIsOpen()
+        || isToolbarRevealed()) {
+        hideBubble();
+        return;
+      }
+
+      // A command asked for the bubble explicitly: it has to exist before the
+      // link field inside it can take focus, even with a plain caret.
+      if (!force) {
+        if (document.activeElement !== area) {
+          hideBubble();
+          return;
+        }
+
+        if (area.selectionStart === area.selectionEnd) {
+          hideBubble();
+          return;
+        }
+      }
+
+      // The probe the mirror already places at the caret start sits on the
+      // first line of the selection, which is exactly where the bubble hangs.
+      var probe = mirror.querySelector(".writing-caret-probe");
+      var rect = probe ? probe.getBoundingClientRect() : null;
+
+      if (!rect || (!rect.width && !rect.height)) {
+        if (!force || !stage) {
+          hideBubble();
+          return;
+        }
+
+        // An empty draft has no probe to measure, so the bubble starts at the
+        // top of the writing surface instead of not appearing at all.
+        var stageRect = stage.getBoundingClientRect();
+        rect = { top: stageRect.top + 8, bottom: stageRect.top + 8, left: stageRect.left, width: 0 };
+      }
+
+      formatBubble.hidden = false;
+
+      var viewport = window.visualViewport;
+      var viewTop = viewport ? viewport.offsetTop : 0;
+      var viewLeft = viewport ? viewport.offsetLeft : 0;
+      var viewWidth = viewport ? viewport.width : window.innerWidth;
+      var viewBottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight;
+      var width = formatBubble.offsetWidth;
+      var height = formatBubble.offsetHeight;
+      var gutter = 8;
+      var top = rect.top - height - gutter;
+      var left = rect.left + rect.width / 2 - width / 2;
+
+      if (top < viewTop + gutter) top = rect.bottom + gutter;
+      // Below the last line there may be no room left at all.
+      if (top + height > viewBottom - gutter) top = Math.max(viewTop + gutter, rect.top - height - gutter);
+
+      left = Math.max(viewLeft + gutter, Math.min(left, viewLeft + viewWidth - width - gutter));
+
+      formatBubble.style.top = Math.round(top) + "px";
+      formatBubble.style.left = Math.round(left) + "px";
+
+      syncFormatState();
+    }
+
+    function syncFormatBar() {
+      if (!formatBar) return;
+
+      var linking = !!(formatBarLink && !formatBarLink.hidden);
+      var inside = formatBar.contains(document.activeElement);
+      var focused = document.activeElement === area || inside;
+      // The bar belongs to the focused writing room. Outside it the page shows
+      // the regular toolbar, and a floating bar there would have nowhere solid
+      // to sit.
+      var open = usesTouchUI()
+        && isZenActive()
+        && (focused || keyboardIsOpen())
+        && !hasOpenDialog()
+        && !isPanelOpen()
+        && !previewIsOpen()
+        && !isToolbarRevealed();
+
+      if (!open && linking && !inside) closeLinkField("bar");
+
+      if (formatBar.hidden !== !open) formatBar.hidden = !open;
+
+      if (!open) {
+        closeHeadingMenu();
+        return;
+      }
+
+      // The frame is pinned to the visual viewport and the bar is a row of that
+      // frame, so there is nothing left to position: no offset to compute and
+      // nothing that can drift while the page scrolls. The frame is refreshed
+      // first so a stale height cannot leave the bar below the edge.
+      syncZenViewport();
+
+      syncFormatState();
+    }
+
+    // Reading the level is safe anywhere; the pressed state of the menu does not
+    // depend on the editor holding focus, so it is kept apart from the caret
+    // driven state above.
+    function syncHeadingMenu(level) {
+      var current = level === undefined ? currentHeadingLevel() : level;
+
+      setFormatPressed("heading", current > 0);
+
+      formatMenuItems.forEach(function (item) {
+        item.setAttribute("aria-checked", String(Number(item.getAttribute("data-level")) === current));
+      });
+    }
+
+    /* Heading menu
+       One button instead of three icons that are hard to tell apart, and one
+       row of choices instead of a cycle nobody can see the state of. */
+
+    function menuFor(kind) {
+      return kind === "bar" ? formatBarMenu : formatMenu;
+    }
+
+    function headingMenuOpen() {
+      return !!((formatMenu && !formatMenu.hidden) || (formatBarMenu && !formatBarMenu.hidden));
+    }
+
+    function closeHeadingMenu() {
+      [formatMenu, formatBarMenu].forEach(function (menu) {
+        if (!menu) return;
+        menu.hidden = true;
+
+        var host = menu.parentNode;
+        if (host) {
+          var button = host.querySelector('[data-format="heading"]');
+          if (button) button.setAttribute("aria-expanded", "false");
+        }
+      });
+    }
+
+    function toggleHeadingMenu(kind) {
+      var menu = menuFor(kind);
+
+      if (!menu) return;
+      if (!menu.hidden) {
+        closeHeadingMenu();
+        return;
+      }
+
+      closeLinkField(kind);
+      closeHeadingMenu();
+      syncHeadingMenu();
+
+      menu.hidden = false;
+
+      var button = menu.parentNode ? menu.parentNode.querySelector('[data-format="heading"]') : null;
+      if (button) button.setAttribute("aria-expanded", "true");
+
+      var checked = menu.querySelector('[aria-checked="true"]') || menu.querySelector("button");
+      if (checked && checked.focus) checked.focus({ preventScroll: true });
+    }
+
+    function applyHeadingLevel(level) {
+      closeHeadingMenu();
+      setHeading(level);
+    }
+
+    formatMenuItems.forEach(function (item) {
+      item.addEventListener("click", function () {
+        applyHeadingLevel(Number(item.getAttribute("data-level")));
+      });
+    });
+
+    function runFormat(name) {
+      if (name === "bold") applyWrap("**");
+      else if (name === "italic") applyWrap("*");
+      else if (name === "quote") setQuote();
+      else if (name === "strike") applyWrap("~~");
+      else if (name === "heading") toggleHeadingMenu(usesTouchUI() ? "bar" : "bubble");
+      else if (name === "ul") setList("ul");
+      else if (name === "ol") setList("ol");
+      else if (name === "code") applyCode();
+      else if (name === "link") openLinkField(usesTouchUI() ? "bar" : "bubble", "link");
+      else if (name === "image") openLinkField(usesTouchUI() ? "bar" : "bubble", "image");
+    }
+
+    formatButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        runFormat(button.getAttribute("data-format"));
+      });
+    });
+
+    [["bubble", formatBubbleLink], ["bar", formatBarLink]].forEach(function (pair) {
+      if (!pair[1]) return;
+
+      pair[1].addEventListener("submit", function (event) {
+        event.preventDefault();
+        commitLink(pair[0]);
+      });
+    });
+
+    [["bubble", formatBubbleInput], ["bar", formatBarInput]].forEach(function (pair) {
+      if (!pair[1]) return;
+
+      pair[1].addEventListener("keydown", function (event) {
+        if (event.key !== "Escape") return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        closeLinkField(pair[0]);
+        area.focus({ preventScroll: true });
+        if (rememberedRange.to > rememberedRange.from) {
+          area.setSelectionRange(rememberedRange.from, rememberedRange.to);
+        }
+        syncFormatBar();
+        scheduleBubble();
+      });
+    });
+
+    // With a mouse the browser keeps the selection when the default is
+    // prevented. A finger is left alone: cancelling a touch there can swallow
+    // the click itself, and the remembered range already covers that case.
+    [formatBubble, formatBar].forEach(function (host) {
+      if (!host) return;
+
+      host.addEventListener("pointerdown", function (event) {
+        if (event.pointerType === "touch") return;
+        event.preventDefault();
+      });
+    });
+
+    ["pointermove", "scroll"].forEach(function (name) {
+      window.addEventListener(name, function () {
+        if (formatBubble && !formatBubble.hidden) scheduleBubble();
+        syncFormatBar();
+      }, { passive: true });
+    });
+
     area.addEventListener("keydown", function (event) {
+      if (event.isComposing || event.keyCode === 229) return;
+
+      var modifier = event.metaKey || event.ctrlKey;
+      var key = event.key ? event.key.toLowerCase() : "";
+
+      if (modifier && !event.altKey && !event.shiftKey && (key === "b" || key === "i")) {
+        event.preventDefault();
+        applyWrap(key === "b" ? "**" : "*");
+        return;
+      }
+
+      // Ctrl/Cmd+K belongs to the notes panel, so links take the shifted key.
+      if (modifier && event.shiftKey && !event.altKey && key === "k") {
+        event.preventDefault();
+        openLinkField(usesTouchUI() ? "bar" : "bubble", "link");
+        return;
+      }
+
+      if (event.altKey && !modifier && /^Digit[1-3]$/.test(event.code || "")) {
+        event.preventDefault();
+        setHeading(Number(event.code.slice(5)));
+        return;
+      }
+
       if (event.key !== "Enter") return;
       if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
       // Never fight an IME composition or a replaced selection.
-      if (event.isComposing || event.keyCode === 229) return;
       if (area.selectionStart !== area.selectionEnd) return;
 
       var position = area.selectionStart;
@@ -3562,10 +4645,13 @@
       window.clearTimeout(zenHintTimer);
       zenHintTimer = null;
       if (isToolbarRevealed()) setToolbarRevealed(false);
+      rememberRange();
       updateStats();
       grow();
       kickCaret();
       scheduleRender();
+      scheduleBubble();
+      syncFormatBar();
       queueSave();
     });
 
@@ -3584,20 +4670,46 @@
 
       kickCaret();
       scheduleRender();
+      rememberRange();
+      scheduleBubble();
+      syncFormatBar();
     });
 
     area.addEventListener("keyup", function () {
       kickCaret();
       scheduleRender();
+      rememberRange();
+      scheduleBubble();
+      syncFormatBar();
     });
 
-    area.addEventListener("focus", kickCaret);
+    area.addEventListener("focus", function () {
+      kickCaret();
+      syncFormatBar();
+      syncFormatTitles();
+
+      // The keyboard animates in after focus, so the height is only final a
+      // little later. Re-measure a few times instead of trusting the first
+      // frame, which is what left the bar sitting behind the keyboard.
+      FORMAT_SETTLE_DELAYS.forEach(function (delay) {
+        window.setTimeout(function () { syncFormatBar(); }, delay);
+      });
+    });
+
+    // The blur that a tap on the buttons causes arrives after the click, so the
+    // bar waits a tick before it decides to go away.
+    area.addEventListener("blur", function () {
+      window.setTimeout(syncFormatBar, 0);
+    });
 
     document.addEventListener("selectionchange", function () {
       if (document.activeElement === area) {
         kickCaret();
         scheduleRender();
+        rememberRange();
+        scheduleBubble();
       }
+      syncFormatBar();
     });
 
     if (window.visualViewport) {
@@ -3605,15 +4717,18 @@
         syncZenViewport();
         kickCaret();
         scheduleEnsureVisible();
+        syncFormatBar();
+        if (formatBubble && !formatBubble.hidden) scheduleBubble();
       });
       window.visualViewport.addEventListener("scroll", function () {
         syncZenViewport();
         handleCaretScroll();
+        syncFormatBar();
       });
     }
 
     window.addEventListener("scroll", handleCaretScroll, { passive: true });
-    room.addEventListener("scroll", handleCaretScroll, { passive: true });
+    if (roomInner) roomInner.addEventListener("scroll", handleCaretScroll, { passive: true });
     ["wheel", "touchmove"].forEach(function (name) {
       window.addEventListener(name, releaseCaretGuard, { passive: true });
     });
@@ -3969,6 +5084,11 @@
 
     stage.addEventListener("pointerdown", function () {
       if (isToolbarRevealed()) setToolbarRevealed(false);
+      // The link field belongs to the selection it was opened for; moving the
+      // caret elsewhere means it is done.
+      closeLinkField("bubble");
+      closeLinkField("bar");
+      hideBubble();
     });
 
     document.addEventListener("keydown", function (event) {
@@ -3991,6 +5111,25 @@
         event.preventDefault();
         return;
       }
+      if (headingMenuOpen()) {
+        closeHeadingMenu();
+        area.focus({ preventScroll: true });
+        event.preventDefault();
+        return;
+      }
+      if (linkFieldOpen()) {
+        closeLinkField("bubble");
+        closeLinkField("bar");
+        area.focus({ preventScroll: true });
+        syncFormatBar();
+        event.preventDefault();
+        return;
+      }
+      if (formatBubble && !formatBubble.hidden) {
+        hideBubble();
+        event.preventDefault();
+        return;
+      }
       if (isToolbarRevealed()) {
         setToolbarRevealed(false);
         event.preventDefault();
@@ -4004,6 +5143,8 @@
       grow();
       scheduleRender();
       kickCaret();
+      syncFormatBar();
+      if (formatBubble && !formatBubble.hidden) scheduleBubble();
     });
 
     window.addEventListener("beforeunload", function () {

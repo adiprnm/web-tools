@@ -2361,23 +2361,14 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   -webkit-text-stroke: 0.55px currentColor;
 }
 
-.writing-mirror .md-em {
+.writing-mirror .md-em,
+.writing-mirror .md-quote {
   font-style: italic;
-}
-
-.writing-mirror .md-underline {
-  text-decoration-line: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.18em;
 }
 
 .writing-mirror .md-strike {
   text-decoration-line: line-through;
   text-decoration-thickness: 1px;
-}
-
-.writing-mirror .md-underline.md-strike {
-  text-decoration-line: underline line-through;
 }
 
 .writing-mirror .md-code {
@@ -2396,6 +2387,326 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
 
 .writing-mirror .md-url {
   color: var(--writing-url);
+}
+
+/* Heading levels are told apart by stroke weight alone. Enlarging them here
+   would break the character grid the mirror shares with the textarea, and
+   the caret would drift away from the glyphs. */
+
+.writing-mirror .md-h1 {
+  -webkit-text-stroke: 1.05px currentColor;
+}
+
+.writing-mirror .md-h2 {
+  -webkit-text-stroke: 0.8px currentColor;
+}
+
+.writing-mirror .md-h3 {
+  -webkit-text-stroke: 0.62px currentColor;
+}
+
+/* Formatting: two shapes, one vocabulary
+   ----------------------------------------------------------
+   With a mouse the buttons hang off the selection; on a touch screen the
+   native selection callout owns that space, so the buttons ride above the
+   keyboard instead. Both are icons only, and both borrow the border and
+   radius of the room so they read as part of the page rather than as the
+   chrome of an app. */
+
+.writing-format-bubble,
+.writing-format-bar {
+  --format-size: 30px;
+  position: fixed;
+  z-index: 520;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  box-shadow: 0 8px 20px -12px rgba(0, 0, 0, 0.35);
+}
+
+.writing-format-bubble[hidden],
+.writing-format-bar[hidden] {
+  display: none;
+}
+
+.writing-format-bubble {
+  opacity: 0;
+  animation: writing-format-in 0.12s ease-out forwards;
+}
+
+@keyframes writing-format-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .writing-format-bubble {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+.writing-format-btn {
+  display: inline-grid;
+  place-items: center;
+  width: var(--format-size);
+  height: var(--format-size);
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 2px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.writing-format-btn .icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* The heading buttons carry a level in text rather than three icons that would
+   be hard to tell apart at 15px. */
+.writing-format-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The heading button is a menu, so it carries a caret and is a little wider
+   than the single-glyph buttons. */
+.writing-format-btn--menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: auto;
+  min-width: var(--format-size);
+  padding-inline: 5px;
+}
+
+.writing-format-caret {
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 4px solid currentColor;
+  opacity: 0.7;
+}
+
+/* The caret points at the list, and the list opens upwards in the bottom bar
+   and downwards from the bubble, so the glyph flips with the surface. */
+.writing-format-bar .writing-format-caret {
+  border-top: 0;
+  border-bottom: 4px solid currentColor;
+}
+
+.writing-format-btn--menu[aria-expanded="true"] {
+  color: var(--ink);
+  background: var(--surface-muted);
+}
+
+/* Heading levels: four quiet rows hanging off the button they belong to. */
+.writing-format-menu {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 118px;
+  padding: 3px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  box-shadow: 0 12px 26px -16px rgba(0, 0, 0, 0.5);
+}
+
+.writing-format-menu[hidden] {
+  display: none;
+}
+
+.writing-format-menu button {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 8px;
+  font-family: inherit;
+  font-size: 0.76rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 2px;
+}
+
+.writing-format-menu button:hover,
+.writing-format-menu button:focus-visible {
+  color: var(--ink);
+  background: var(--surface-muted);
+  outline: none;
+}
+
+.writing-format-menu button[aria-checked="true"] {
+  color: var(--ink);
+  background: var(--surface-muted);
+  font-weight: 600;
+}
+
+.writing-format-bubble .writing-format-menu {
+  top: calc(100% + 6px);
+  right: 0;
+}
+
+.writing-format-bar .writing-format-menu {
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.writing-format-btn:hover,
+.writing-format-btn:focus-visible {
+  color: var(--ink);
+  background: var(--surface-muted);
+}
+
+.writing-format-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.writing-format-btn[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--surface-muted);
+}
+
+/* The link field replaces the buttons rather than stacking next to them, so
+   the bubble keeps its width when it is asked for a URL. */
+
+.writing-link {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.writing-link[hidden] {
+  display: none;
+}
+
+.writing-format-bubble.is-linking > .writing-format-btn,
+.writing-format-bar.is-linking .writing-format-bar-inner > .writing-format-btn {
+  display: none;
+}
+
+.writing-link-input {
+  width: 200px;
+  height: 28px;
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink);
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  outline: none;
+}
+
+.writing-link-input:focus {
+  border-color: var(--accent);
+}
+
+.writing-link-apply {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 2px;
+}
+
+.writing-link-apply .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.writing-link-apply:hover,
+.writing-link-apply:focus-visible {
+  background: var(--surface-muted);
+  outline: none;
+}
+
+/* The thumb-sized version: the last row of the writing room, stuck to the
+   bottom of its scrollport. The room is already pinned to the visual viewport
+   by syncZenViewport, so the bar rides the keyboard with no arithmetic and no
+   viewport queries of its own. No radius and no shadow, because it is the edge
+   of the page and not a floating card. */
+
+.writing-format-bar {
+  --format-size: 34px;
+  /* Relative, not static: the keyboard fallback nudges it up with `bottom`,
+     and the whole frame is pinned to the visual viewport so scrolling cannot
+     move it. */
+  position: relative;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  z-index: auto;
+  flex: 0 0 auto;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.writing-format-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: min(760px, 100%);
+  /* Nine buttons are wider than a small phone; let the row scroll rather than
+     push the first one off the edge. */
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* No safe-area padding here. The bar is pinned to the top of the keyboard,
+     not to the edge of the screen, and iOS grows env(safe-area-inset-bottom)
+     the moment the URL bar collapses while scrolling, which used to lift the
+     buttons off the bottom edge. */
+  padding: 3px 8px;
+}
+
+.writing-format-bar .writing-link {
+  flex: 1;
+  justify-content: center;
+}
+
+.writing-format-bar .writing-link-input {
+  width: min(320px, 60vw);
+  height: 34px;
+}
+
+.writing-format-bar .writing-link-apply {
+  width: 34px;
+  height: 34px;
 }
 
 .writing-stats {
@@ -3280,11 +3591,17 @@ body.is-notes-open .notes-panel {
 
 body.is-zen #writing-room .writing-room-inner {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
+  /* width: 100% matters now that this is a flex item: margin-inline: auto on a
+     flex item cancels the stretch, and the column would shrink to its content
+     instead of filling the frame. */
+  width: 100%;
   max-width: 760px;
-  min-height: calc(100vh - clamp(36px, 8vw, 88px));
+  min-height: 0;
   margin-inline: auto;
   padding: clamp(18px, 4vw, 44px);
+  overflow: auto;
 }
 
 body.is-zen .writing-stage {
@@ -3382,10 +3699,15 @@ body.is-zen #writing-room {
   position: fixed;
   inset: 0;
   z-index: 500;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: none;
   padding: 0;
-  overflow: auto;
+  /* The room is the frame, the column inside it scrolls. That keeps the
+     formatting bar out of the scroll flow, so it cannot come to rest against
+     the end of the draft. */
+  overflow: hidden;
   background: var(--paper);
 }
 
@@ -3395,7 +3717,7 @@ body.is-zen #writing-room {
    still draw stepper buttons put arrows over the page. Use a slim thumb
    over a fully transparent track and drop the buttons entirely. */
 
-body.is-zen #writing-room::-webkit-scrollbar,
+body.is-zen #writing-room .writing-room-inner::-webkit-scrollbar,
 .notes-body::-webkit-scrollbar,
 .preview-body::-webkit-scrollbar,
 .pick-dialog-inner::-webkit-scrollbar {
@@ -3404,18 +3726,18 @@ body.is-zen #writing-room::-webkit-scrollbar,
   background: transparent;
 }
 
-body.is-zen #writing-room::-webkit-scrollbar-track,
+body.is-zen #writing-room .writing-room-inner::-webkit-scrollbar-track,
 .notes-body::-webkit-scrollbar-track,
 .preview-body::-webkit-scrollbar-track,
 .pick-dialog-inner::-webkit-scrollbar-track,
-body.is-zen #writing-room::-webkit-scrollbar-track-piece,
+body.is-zen #writing-room .writing-room-inner::-webkit-scrollbar-track-piece,
 .notes-body::-webkit-scrollbar-track-piece,
 .preview-body::-webkit-scrollbar-track-piece,
 .pick-dialog-inner::-webkit-scrollbar-track-piece {
   background: transparent;
 }
 
-body.is-zen #writing-room::-webkit-scrollbar-button,
+body.is-zen #writing-room .writing-room-inner::-webkit-scrollbar-button,
 .notes-body::-webkit-scrollbar-button,
 .preview-body::-webkit-scrollbar-button,
 .pick-dialog-inner::-webkit-scrollbar-button {
@@ -3424,7 +3746,7 @@ body.is-zen #writing-room::-webkit-scrollbar-button,
   height: 0;
 }
 
-body.is-zen #writing-room::-webkit-scrollbar-thumb,
+body.is-zen #writing-room .writing-room-inner::-webkit-scrollbar-thumb,
 .notes-body::-webkit-scrollbar-thumb,
 .preview-body::-webkit-scrollbar-thumb,
 .pick-dialog-inner::-webkit-scrollbar-thumb {
@@ -3434,14 +3756,14 @@ body.is-zen #writing-room::-webkit-scrollbar-thumb,
   border-radius: 999px;
 }
 
-body.is-zen #writing-room::-webkit-scrollbar-thumb:hover,
+body.is-zen #writing-room .writing-room-inner::-webkit-scrollbar-thumb:hover,
 .notes-body::-webkit-scrollbar-thumb:hover,
 .preview-body::-webkit-scrollbar-thumb:hover,
 .pick-dialog-inner::-webkit-scrollbar-thumb:hover {
   background-color: var(--muted);
 }
 
-body.is-zen #writing-room::-webkit-scrollbar-corner,
+body.is-zen #writing-room .writing-room-inner::-webkit-scrollbar-corner,
 .notes-body::-webkit-scrollbar-corner,
 .preview-body::-webkit-scrollbar-corner,
 .pick-dialog-inner::-webkit-scrollbar-corner {

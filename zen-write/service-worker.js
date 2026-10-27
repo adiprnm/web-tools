@@ -1,4 +1,4 @@
-var CACHE_NAME = "zen-write-v33";
+var CACHE_NAME = "zen-write-v34";
 var APP_SHELL = [
   "/zen-write/",
   "/zen-write/i18n.js",
@@ -71,11 +71,12 @@ self.addEventListener("fetch", function (event) {
     return;
   }
 
+  // Serve what is cached, then refresh it in the background. A deploy lands on
+  // the next load instead of waiting for someone to bump CACHE_NAME by hand,
+  // which is how a fixed script kept being served as the old one.
   event.respondWith(
     caches.match(event.request).then(function (cached) {
-      if (cached) return cached;
-
-      return fetch(event.request).then(function (response) {
+      var network = fetch(event.request).then(function (response) {
         if (response.ok && event.request.url.indexOf(self.location.origin) === 0) {
           var copy = response.clone();
           event.waitUntil(
@@ -86,6 +87,15 @@ self.addEventListener("fetch", function (event) {
         }
         return response;
       });
+
+      if (cached) {
+        event.waitUntil(network.catch(function () {}));
+        return cached;
+      }
+
+      // No cached copy and the network failed: let it fail rather than answer a
+      // script request with the page shell.
+      return network;
     })
   );
 });
