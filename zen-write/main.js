@@ -1786,11 +1786,12 @@
     }
 
     function updateStats() {
-      var text = area.value;
-      var words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      var words = countWords(area.value);
 
-      wordsEl.textContent = words;
-      minutesEl.textContent = words ? Math.max(1, Math.ceil(words / WORDS_PER_MINUTE)) : 0;
+      // Elemen statistik bisa saja belum cocok dengan skrip ini; jangan biarkan
+      // baris itu memotong openDoc() di tengah jalan.
+      if (wordsEl) wordsEl.textContent = words;
+      if (minutesEl) minutesEl.textContent = words ? Math.max(1, Math.ceil(words / WORDS_PER_MINUTE)) : 0;
     }
 
     function grow() {
