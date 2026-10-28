@@ -2630,8 +2630,13 @@ body.is-toolbar-revealed .writing-toolbar-trigger {
   outline: none;
 }
 
-.writing-link-input:focus {
+/* No focus ring here: the field is opened by an explicit click or shortcut, so
+   the accent border is the only state it needs. Covers both the link and the
+   image form, which share this input. */
+.writing-link-input:focus,
+.writing-link-input:focus-visible {
   border-color: var(--accent);
+  outline: none;
 }
 
 .writing-link-apply {
