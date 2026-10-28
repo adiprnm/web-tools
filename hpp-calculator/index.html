@@ -1,0 +1,602 @@
+---
+layout: tool
+tool: hpp-calculator
+title: Kalkulator HPP
+description: Hitung harga pokok produksi per unit dari bahan baku, tenaga kerja, dan overhead, lalu susun harga jual.
+---
+<div class="hpp-tool" id="hpp-tool">
+  <div class="field-row field-row--wide">
+    <div class="field">
+      <label class="field-label" for="hpp-product">Nama produk</label>
+      <input id="hpp-product" type="text" placeholder="Contoh: Kopi susu 250 ml" autocomplete="off">
+    </div>
+    <div class="field">
+      <label class="field-label" for="hpp-batch">Hasil per batch</label>
+      <input id="hpp-batch" type="number" min="1" step="any" inputmode="decimal" value="1" placeholder="1">
+      <p class="field-hint field-hint--below">Jumlah unit dari sekali produksi.</p>
+    </div>
+  </div>
+
+  <section class="hpp-group" aria-labelledby="hpp-group-material">
+    <header class="hpp-group-head">
+      <h2 class="hpp-group-title" id="hpp-group-material"><span class="slash" aria-hidden="true">/</span> Bahan baku</h2>
+      <p class="hpp-group-total" id="hpp-total-material">Rp0</p>
+    </header>
+    <div class="hpp-row-head" aria-hidden="true">
+      <span>Komponen</span>
+      <span>Qty</span>
+      <span>Harga satuan</span>
+      <span>Subtotal</span>
+      <span></span>
+    </div>
+    <div class="hpp-rows" id="hpp-rows-material"></div>
+    <button class="btn btn--quiet btn--small hpp-add" type="button" data-add="material">
+      <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+      Tambah bahan
+    </button>
+  </section>
+
+  <section class="hpp-group" aria-labelledby="hpp-group-labor">
+    <header class="hpp-group-head">
+      <h2 class="hpp-group-title" id="hpp-group-labor"><span class="slash" aria-hidden="true">/</span> Tenaga kerja</h2>
+      <p class="hpp-group-total" id="hpp-total-labor">Rp0</p>
+    </header>
+    <div class="hpp-row-head" aria-hidden="true">
+      <span>Komponen</span>
+      <span>Qty</span>
+      <span>Harga satuan</span>
+      <span>Subtotal</span>
+      <span></span>
+    </div>
+    <div class="hpp-rows" id="hpp-rows-labor"></div>
+    <button class="btn btn--quiet btn--small hpp-add" type="button" data-add="labor">
+      <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+      Tambah tenaga kerja
+    </button>
+  </section>
+
+  <section class="hpp-group" aria-labelledby="hpp-group-overhead">
+    <header class="hpp-group-head">
+      <h2 class="hpp-group-title" id="hpp-group-overhead"><span class="slash" aria-hidden="true">/</span> Overhead</h2>
+      <p class="hpp-group-total" id="hpp-total-overhead">Rp0</p>
+    </header>
+    <div class="hpp-row-head" aria-hidden="true">
+      <span>Komponen</span>
+      <span>Qty</span>
+      <span>Harga satuan</span>
+      <span>Subtotal</span>
+      <span></span>
+    </div>
+    <div class="hpp-rows" id="hpp-rows-overhead"></div>
+    <button class="btn btn--quiet btn--small hpp-add" type="button" data-add="overhead">
+      <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+      Tambah overhead
+    </button>
+  </section>
+
+  <section class="hpp-summary" aria-labelledby="hpp-summary-title">
+    <div>
+      <h2 class="hpp-kicker" id="hpp-summary-title">HPP per unit</h2>
+      <p class="hpp-unit-value" id="hpp-unit" aria-live="polite">Rp0</p>
+      <p class="hpp-summary-note" id="hpp-summary-note">Belum ada biaya yang diisi.</p>
+    </div>
+    <dl class="hpp-figures">
+      <div class="hpp-figure">
+        <dt>Bahan baku</dt>
+        <dd><span id="hpp-fig-material">Rp0</span><span class="hpp-share" id="hpp-share-material"></span></dd>
+      </div>
+      <div class="hpp-figure">
+        <dt>Tenaga kerja</dt>
+        <dd><span id="hpp-fig-labor">Rp0</span><span class="hpp-share" id="hpp-share-labor"></span></dd>
+      </div>
+      <div class="hpp-figure">
+        <dt>Overhead</dt>
+        <dd><span id="hpp-fig-overhead">Rp0</span><span class="hpp-share" id="hpp-share-overhead"></span></dd>
+      </div>
+      <div class="hpp-figure hpp-figure--total">
+        <dt>Total batch</dt>
+        <dd><span id="hpp-fig-total">Rp0</span><span class="hpp-share" id="hpp-share-total"></span></dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="hpp-pricing" aria-labelledby="hpp-pricing-title">
+    <header class="hpp-group-head">
+      <h2 class="hpp-group-title" id="hpp-pricing-title"><span class="slash" aria-hidden="true">/</span> Harga jual</h2>
+    </header>
+
+    <div class="field-row field-row--wide">
+      <div class="field">
+        <p class="field-label">Dasar perhitungan</p>
+        <div class="segmented" role="group" aria-label="Dasar perhitungan harga jual">
+          <button class="seg" type="button" data-mode="margin" aria-pressed="true">Margin</button>
+          <button class="seg" type="button" data-mode="markup" aria-pressed="false">Markup</button>
+        </div>
+        <p class="field-hint field-hint--below" id="hpp-target-hint">Persentase laba dari harga jual.</p>
+      </div>
+      <div class="field">
+        <label class="field-label" for="hpp-target">Target (%)</label>
+        <input id="hpp-target" type="number" min="0" max="99.9" step="any" inputmode="decimal" value="30" placeholder="30">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="hpp-round">Bulatkan harga</label>
+      <select id="hpp-round">
+        <option value="0">Rupiah penuh</option>
+        <option value="100">Ke atas, Rp100</option>
+        <option value="500">Ke atas, Rp500</option>
+        <option value="1000">Ke atas, Rp1.000</option>
+      </select>
+      <p class="field-hint field-hint--below">Harga jual selalu dibulatkan ke atas.</p>
+    </div>
+
+    <div class="hpp-price-result">
+      <div>
+        <p class="hpp-kicker">Harga jual per unit</p>
+        <p class="hpp-price-value" id="hpp-price" aria-live="polite">Rp0</p>
+        <p class="hpp-price-note" id="hpp-price-note"></p>
+      </div>
+      <button class="btn btn--primary" type="button" id="hpp-copy">
+        <svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg>
+        <span class="btn-label">Salin ringkasan</span>
+      </button>
+    </div>
+  </section>
+
+  <div class="actions actions--between">
+    <button class="btn btn--quiet" type="button" id="hpp-reset">Mulai ulang</button>
+    <p class="field-hint">Draf tersimpan otomatis di browser.</p>
+  </div>
+</div>
+
+<script>
+  (function () {
+    "use strict";
+
+    var STORAGE_KEY = "perkakas-hpp-v1";
+    var GROUPS = [
+      { key: "material", label: "bahan baku", placeholder: "Contoh: Biji kopi" },
+      { key: "labor", label: "tenaga kerja", placeholder: "Contoh: Upah barista" },
+      { key: "overhead", label: "overhead", placeholder: "Contoh: Kemasan cup" }
+    ];
+
+    var tool = document.getElementById("hpp-tool");
+    var productInput = document.getElementById("hpp-product");
+    var batchInput = document.getElementById("hpp-batch");
+    var targetInput = document.getElementById("hpp-target");
+    var targetHint = document.getElementById("hpp-target-hint");
+    var roundSelect = document.getElementById("hpp-round");
+    var unitEl = document.getElementById("hpp-unit");
+    var summaryNote = document.getElementById("hpp-summary-note");
+    var priceEl = document.getElementById("hpp-price");
+    var priceNote = document.getElementById("hpp-price-note");
+    var copyButton = document.getElementById("hpp-copy");
+    var resetButton = document.getElementById("hpp-reset");
+    var modeButtons = Array.prototype.slice.call(tool.querySelectorAll("[data-mode]"));
+    var totalFig = document.getElementById("hpp-fig-total");
+    var totalShare = document.getElementById("hpp-share-total");
+
+    var currency = new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
+    var numberFormat = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 });
+    var percentFormat = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 });
+
+    var currentMode = "margin";
+    var lastResult = null;
+    var saveTimer = null;
+
+    function money(value) {
+      return currency.format(Math.round(value));
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function readNumber(input) {
+      var value = parseFloat(input.value);
+      return isFinite(value) && value > 0 ? value : 0;
+    }
+
+    function roundUp(value, step) {
+      if (!(value > 0)) return 0;
+      if (!(step > 0)) return Math.ceil(value);
+      return Math.ceil(value / step) * step;
+    }
+
+    function rowsContainer(key) {
+      return document.getElementById("hpp-rows-" + key);
+    }
+
+    function groupDefinition(key) {
+      for (var i = 0; i < GROUPS.length; i += 1) {
+        if (GROUPS[i].key === key) return GROUPS[i];
+      }
+      return GROUPS[0];
+    }
+
+    function setMode(mode) {
+      currentMode = mode === "markup" ? "markup" : "margin";
+
+      modeButtons.forEach(function (button) {
+        button.setAttribute("aria-pressed", String(button.dataset.mode === currentMode));
+      });
+
+      targetHint.textContent = currentMode === "margin"
+        ? "Persentase laba dari harga jual."
+        : "Persentase laba dari total HPP.";
+    }
+
+    function createRow(group, data) {
+      var row = document.createElement("div");
+      row.className = "hpp-row";
+      row.dataset.group = group.key;
+      row.innerHTML =
+        '<label class="hpp-cell hpp-cell--name">' +
+          '<span class="hpp-cell-label">Komponen</span>' +
+          '<input class="hpp-row-name" type="text" placeholder="' + group.placeholder + '" aria-label="Nama komponen ' + group.label + '">' +
+        '</label>' +
+        '<label class="hpp-cell hpp-cell--qty">' +
+          '<span class="hpp-cell-label">Qty</span>' +
+          '<input class="hpp-row-qty" type="number" min="0" step="any" inputmode="decimal" aria-label="Jumlah ' + group.label + '">' +
+        '</label>' +
+        '<label class="hpp-cell hpp-cell--price">' +
+          '<span class="hpp-cell-label">Harga satuan</span>' +
+          '<span class="hpp-money">' +
+            '<span class="hpp-money-prefix" aria-hidden="true">Rp</span>' +
+            '<input class="hpp-row-price" type="number" min="0" step="any" inputmode="decimal" placeholder="0" aria-label="Harga satuan ' + group.label + '">' +
+          '</span>' +
+        '</label>' +
+        '<div class="hpp-cell hpp-cell--subtotal">' +
+          '<span class="hpp-cell-label">Subtotal</span>' +
+          '<span class="hpp-row-subtotal">Rp0</span>' +
+        '</div>' +
+        '<button class="icon-btn icon-btn--danger hpp-remove" type="button" aria-label="Hapus komponen ' + group.label + '">' +
+          '<svg class="icon" aria-hidden="true"><use href="#i-trash"></use></svg>' +
+        '</button>';
+
+      row.querySelector(".hpp-row-name").value = data && data.name ? data.name : "";
+      row.querySelector(".hpp-row-qty").value = data && data.qty > 0 ? data.qty : 1;
+      row.querySelector(".hpp-row-price").value = data && data.price > 0 ? data.price : "";
+
+      return row;
+    }
+
+    function updateRemoveButtons(key) {
+      var rows = rowsContainer(key).querySelectorAll(".hpp-row");
+      rows.forEach(function (row) {
+        row.querySelector(".hpp-remove").disabled = rows.length === 1;
+      });
+    }
+
+    function addRow(key, data, focus) {
+      var group = groupDefinition(key);
+      var row = createRow(group, data || {});
+      rowsContainer(key).appendChild(row);
+      updateRemoveButtons(key);
+      if (focus) row.querySelector(".hpp-row-name").focus();
+      return row;
+    }
+
+    function collectState() {
+      var state = {
+        product: productInput.value,
+        batch: readNumber(batchInput),
+        mode: currentMode,
+        target: clamp(readNumber(targetInput), 0, 99.9),
+        rounding: parseInt(roundSelect.value, 10) || 0,
+        groups: {}
+      };
+
+      GROUPS.forEach(function (group) {
+        state.groups[group.key] = Array.prototype.map.call(
+          rowsContainer(group.key).querySelectorAll(".hpp-row"),
+          function (row) {
+            return {
+              name: row.querySelector(".hpp-row-name").value,
+              qty: readNumber(row.querySelector(".hpp-row-qty")),
+              price: readNumber(row.querySelector(".hpp-row-price"))
+            };
+          }
+        );
+      });
+
+      return state;
+    }
+
+    function scheduleSave() {
+      window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(saveState, 300);
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(collectState()));
+      } catch (error) {
+        // localStorage bisa diblokir; kalkulator tetap berjalan.
+      }
+    }
+
+    function loadState() {
+      try {
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+
+        var data = JSON.parse(raw);
+        if (!data || typeof data !== "object") return null;
+
+        var state = defaults();
+        state.product = typeof data.product === "string" ? data.product : "";
+        state.batch = data.batch > 0 ? data.batch : 1;
+        state.mode = data.mode === "markup" ? "markup" : "margin";
+        state.target = isFinite(data.target) ? clamp(data.target, 0, 99.9) : 30;
+        state.rounding = [0, 100, 500, 1000].indexOf(data.rounding) >= 0 ? data.rounding : 0;
+
+        GROUPS.forEach(function (group) {
+          var list = data.groups && Array.isArray(data.groups[group.key]) ? data.groups[group.key] : [];
+          state.groups[group.key] = list.map(function (item) {
+            return {
+              name: item && typeof item.name === "string" ? item.name : "",
+              qty: item && item.qty > 0 ? item.qty : 1,
+              price: item && item.price > 0 ? item.price : 0
+            };
+          });
+        });
+
+        return state;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function defaults() {
+      return {
+        product: "",
+        batch: 1,
+        mode: "margin",
+        target: 30,
+        rounding: 0,
+        groups: { material: [], labor: [], overhead: [] }
+      };
+    }
+
+    function mount(state) {
+      productInput.value = state.product || "";
+      batchInput.value = state.batch || 1;
+      targetInput.value = state.target != null ? state.target : 30;
+      roundSelect.value = String(state.rounding || 0);
+      setMode(state.mode);
+
+      GROUPS.forEach(function (group) {
+        var container = rowsContainer(group.key);
+        container.innerHTML = "";
+
+        var list = Array.isArray(state.groups[group.key]) ? state.groups[group.key] : [];
+        if (!list.length) list = [{ name: "", qty: 1, price: 0 }];
+
+        list.forEach(function (item) {
+          container.appendChild(createRow(group, item));
+        });
+
+        updateRemoveButtons(group.key);
+      });
+
+      calculate();
+    }
+
+    function calculate() {
+      var totals = {};
+      var grand = 0;
+
+      GROUPS.forEach(function (group) {
+        var sum = 0;
+
+        rowsContainer(group.key).querySelectorAll(".hpp-row").forEach(function (row) {
+          var qty = readNumber(row.querySelector(".hpp-row-qty"));
+          var price = readNumber(row.querySelector(".hpp-row-price"));
+          var subtotal = qty * price;
+
+          sum += subtotal;
+          row.querySelector(".hpp-row-subtotal").textContent = money(subtotal);
+        });
+
+        totals[group.key] = sum;
+        grand += sum;
+        document.getElementById("hpp-total-" + group.key).textContent = money(sum);
+        document.getElementById("hpp-fig-" + group.key).textContent = money(sum);
+      });
+
+      GROUPS.forEach(function (group) {
+        var share = document.getElementById("hpp-share-" + group.key);
+        share.textContent = grand > 0
+          ? percentFormat.format((totals[group.key] / grand) * 100) + "%"
+          : "";
+      });
+
+      totalFig.textContent = money(grand);
+      totalShare.textContent = grand > 0 ? "100%" : "";
+
+      var batch = readNumber(batchInput);
+      var unit = batch > 0 ? grand / batch : null;
+
+      unitEl.textContent = unit === null ? "—" : money(unit);
+
+      if (unit === null) {
+        summaryNote.textContent = "Isi hasil per batch minimal 1 unit.";
+      } else if (grand > 0) {
+        summaryNote.textContent = "Dari total batch " + money(grand) + " untuk " + numberFormat.format(batch) + " unit.";
+      } else {
+        summaryNote.textContent = "Belum ada biaya yang diisi.";
+      }
+
+      var target = clamp(readNumber(targetInput), 0, 99.9);
+      var rounding = parseInt(roundSelect.value, 10) || 0;
+      var price = null;
+
+      if (unit !== null) {
+        var raw = currentMode === "margin"
+          ? (unit > 0 ? unit / (1 - target / 100) : 0)
+          : unit * (1 + target / 100);
+        price = roundUp(raw, rounding);
+      }
+
+      priceEl.textContent = price === null ? "—" : money(price);
+      priceNote.classList.remove("is-negative");
+
+      if (price === null) {
+        priceNote.textContent = "Isi hasil per batch minimal 1 unit.";
+      } else if (price > 0 && unit > 0) {
+        var profit = price - unit;
+        var actualMargin = (profit / price) * 100;
+        priceNote.textContent = "Laba kotor " + money(profit) + " per unit · margin aktual " + percentFormat.format(actualMargin) + "%.";
+        priceNote.classList.toggle("is-negative", profit < 0);
+      } else if (price > 0) {
+        priceNote.textContent = "Harga jual per unit sebelum biaya produksi.";
+      } else {
+        priceNote.textContent = "Isi biaya produksi untuk menghitung harga jual.";
+      }
+
+      lastResult = {
+        totals: totals,
+        grand: grand,
+        batch: batch,
+        unit: unit,
+        price: price,
+        target: target,
+        mode: currentMode
+      };
+    }
+
+    function buildSummary() {
+      if (!lastResult) return "";
+
+      var result = lastResult;
+      var lines = [];
+      var product = productInput.value.trim();
+
+      lines.push(product ? "HPP " + product : "Ringkasan HPP");
+      if (result.batch > 0) {
+        lines.push("Hasil: " + numberFormat.format(result.batch) + " unit per batch");
+      }
+      lines.push("");
+      lines.push("Bahan baku: " + money(result.totals.material));
+      lines.push("Tenaga kerja: " + money(result.totals.labor));
+      lines.push("Overhead: " + money(result.totals.overhead));
+      lines.push("Total HPP batch: " + money(result.grand));
+      lines.push("HPP per unit: " + (result.unit === null ? "—" : money(result.unit)));
+      lines.push("");
+
+      if (result.price === null) {
+        lines.push("Harga jual belum bisa dihitung.");
+      } else {
+        var basis = result.mode === "margin" ? "margin" : "markup";
+        lines.push("Harga jual (" + basis + " " + percentFormat.format(result.target) + "%): " + money(result.price));
+        lines.push("Laba kotor per unit: " + money(result.price - (result.unit || 0)));
+      }
+
+      return lines.join("\n");
+    }
+
+    tool.addEventListener("input", function (event) {
+      if (!event.target.matches("input, select")) return;
+      calculate();
+      scheduleSave();
+    });
+
+    tool.addEventListener("change", function (event) {
+      if (!event.target.matches("input, select")) return;
+      calculate();
+      scheduleSave();
+    });
+
+    tool.addEventListener("focusout", function (event) {
+      var input = event.target;
+
+      if (input === batchInput) {
+        if (!(parseFloat(input.value) >= 1)) input.value = "1";
+      } else if (input.classList.contains("hpp-row-qty")) {
+        if (!(parseFloat(input.value) >= 0)) input.value = "1";
+      } else if (input.classList.contains("hpp-row-price")) {
+        if (!(parseFloat(input.value) >= 0)) input.value = "";
+      } else if (input === targetInput) {
+        var value = parseFloat(input.value);
+        if (!isFinite(value)) value = 0;
+        input.value = String(clamp(value, 0, 99.9));
+      } else {
+        return;
+      }
+
+      calculate();
+      scheduleSave();
+    });
+
+    tool.addEventListener("click", function (event) {
+      var addButton = event.target.closest("[data-add]");
+      if (addButton) {
+        addRow(addButton.dataset.add, {}, true);
+        calculate();
+        scheduleSave();
+        return;
+      }
+
+      var removeButton = event.target.closest(".hpp-remove");
+      if (removeButton && !removeButton.disabled) {
+        var row = removeButton.closest(".hpp-row");
+        var key = row.dataset.group;
+        row.remove();
+        updateRemoveButtons(key);
+        calculate();
+        scheduleSave();
+      }
+    });
+
+    modeButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        if (currentMode === button.dataset.mode) return;
+        setMode(button.dataset.mode);
+        calculate();
+        scheduleSave();
+      });
+    });
+
+    copyButton.addEventListener("click", function () {
+      var text = buildSummary();
+      if (!text || !window.Perkakas) return;
+
+      window.Perkakas.copy(text).then(function (copied) {
+        if (!copied) return;
+
+        var label = copyButton.querySelector(".btn-label");
+        if (!label) return;
+
+        label.textContent = "Disalin";
+        window.setTimeout(function () {
+          label.textContent = "Salin ringkasan";
+        }, 1600);
+      });
+    });
+
+    resetButton.addEventListener("click", function () {
+      if (!window.confirm("Mulai ulang? Semua isian dan draf yang tersimpan akan dihapus.")) return;
+
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (error) {
+        // Tidak apa-apa bila localStorage tidak tersedia.
+      }
+
+      mount(defaults());
+
+      if (window.Perkakas) window.Perkakas.toast("Draf dihapus.");
+    });
+
+    window.addEventListener("beforeunload", saveState);
+
+    mount(loadState() || defaults());
+  })();
+</script>

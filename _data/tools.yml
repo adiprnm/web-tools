@@ -70,3 +70,11 @@
   icon: link
   note: Jika alamat tidak menyertakan protokol, https:// ditambahkan otomatis.
   privacy: URL diproses di browser. Tidak ada permintaan jaringan yang dibuat.
+
+- slug: hpp-calculator
+  title: Kalkulator HPP
+  description: Hitung harga pokok produksi per unit dari bahan baku, tenaga kerja, dan overhead, lalu susun harga jual.
+  group: Usaha
+  icon: calculator
+  note: Bahan baku, tenaga kerja, dan overhead dijumlahkan untuk satu batch, lalu dibagi jumlah unit. Harga jual memakai margin (dari harga jual) atau markup (dari HPP), lalu dibulatkan ke atas.
+  privacy: Isian disimpan sebagai draf di localStorage perangkatmu. Tidak ada data yang dikirim ke server.

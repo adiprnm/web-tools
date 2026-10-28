@@ -4200,3 +4200,325 @@ body.has-keyboard.is-zen-flow #writing-room:has(.writing-area:focus) .writing-st
 .sync-dialog .field-error[hidden] {
   display: none;
 }
+
+/* ------------------------------------------------------------
+   HPP calculator
+   ------------------------------------------------------------ */
+
+.hpp-group {
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.hpp-group + .hpp-group {
+  margin-top: 26px;
+}
+
+.hpp-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.hpp-group-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+.hpp-group-total {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.hpp-row-head,
+.hpp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 68px 128px 108px 32px;
+  gap: 8px;
+  align-items: center;
+}
+
+.hpp-row-head {
+  padding-bottom: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--muted);
+}
+
+.hpp-row-head span:nth-child(2),
+.hpp-row-head span:nth-child(3),
+.hpp-row-head span:nth-child(4) {
+  text-align: right;
+}
+
+.hpp-row {
+  padding-block: 7px;
+  border-bottom: 1px solid var(--line);
+}
+
+.hpp-cell {
+  display: block;
+  min-width: 0;
+}
+
+.hpp-cell-label {
+  display: none;
+}
+
+.hpp-row input {
+  width: 100%;
+  padding: 7px 9px;
+  font-size: 0.84rem;
+}
+
+.hpp-row .hpp-row-qty,
+.hpp-row .hpp-row-price {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.hpp-money {
+  position: relative;
+  display: block;
+}
+
+.hpp-money-prefix {
+  position: absolute;
+  top: 50%;
+  left: 9px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.hpp-money input {
+  padding-left: 29px;
+}
+
+.hpp-cell--subtotal {
+  text-align: right;
+}
+
+.hpp-row-subtotal {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.hpp-add {
+  margin-top: 6px;
+}
+
+.hpp-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 34px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.hpp-kicker {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.hpp-unit-value {
+  margin-top: 5px;
+  font-family: var(--font-mono);
+  font-size: clamp(2.1rem, 6vw, 3rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.hpp-summary-note {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.hpp-figures {
+  margin: 0;
+}
+
+.hpp-figure {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.hpp-figure:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.hpp-figure dt {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.hpp-figure dd {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hpp-figure--total dt,
+.hpp-figure--total dd {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.hpp-share {
+  font-size: 0.64rem;
+  color: var(--muted);
+}
+
+.hpp-pricing {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.hpp-price-result {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 18px;
+  background: var(--surface-muted);
+  border-radius: 2px;
+}
+
+.hpp-price-value {
+  margin-top: 5px;
+  font-family: var(--font-mono);
+  font-size: clamp(1.9rem, 5vw, 2.5rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.hpp-price-note {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.hpp-price-note.is-negative {
+  color: var(--danger-text);
+}
+
+@media (max-width: 620px) {
+  .hpp-row-head {
+    display: none;
+  }
+
+  .hpp-row {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "name name"
+      "qty price"
+      "subtotal subtotal";
+    gap: 8px;
+    padding-block: 12px;
+  }
+
+  .hpp-cell--name {
+    grid-area: name;
+    padding-right: 40px;
+  }
+
+  .hpp-cell--qty {
+    grid-area: qty;
+  }
+
+  .hpp-cell--price {
+    grid-area: price;
+  }
+
+  .hpp-cell--subtotal {
+    grid-area: subtotal;
+  }
+
+  .hpp-row > .hpp-remove {
+    position: absolute;
+    top: 12px;
+    right: 0;
+  }
+
+  .hpp-cell-label {
+    display: block;
+    margin-bottom: 3px;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+
+  .hpp-cell--subtotal {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  .hpp-cell--subtotal .hpp-cell-label {
+    margin-bottom: 0;
+  }
+
+  .hpp-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    padding: 16px;
+  }
+
+  .hpp-price-result {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .hpp-price-result .btn {
+    width: 100%;
+  }
+}
+
+.hpp-pricing .field-row {
+  margin-bottom: 20px;
+}
