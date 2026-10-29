@@ -3564,7 +3564,7 @@
       document.body.classList.toggle("has-keyboard", inset > KEYBOARD_MIN_INSET);
     }
 
-    function syncZenViewport() {
+    function syncZenViewport(force) {
       if (!document.body.classList.contains("is-zen")) return;
 
       var viewport = window.visualViewport;
@@ -3572,12 +3572,21 @@
         ? { top: viewport.offsetTop, left: viewport.offsetLeft, width: viewport.width, height: viewport.height }
         : { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight };
 
+      // A viewport that measures nothing is not a viewport. Right after the app
+      // comes back from the background the numbers can still be zero for a
+      // frame or two; taking them would collapse the room and the padding with
+      // it. Keep the last good frame instead.
+      if (!(box.width > 0) || !(box.height > 0)) return;
+
       // visualViewport can scroll every frame; rewriting the same box would
       // invalidate layout each time, so only touch the styles when they move.
       // The inline styles are checked too: the cached box alone would never
       // notice a frame that drifted away from it, and everything anchored to
-      // the frame would silently follow it off the edge.
-      if (box.top === viewportBox.top
+      // the frame would silently follow it off the edge. `force` skips the
+      // comparison for the cases where the numbers are stale rather than
+      // changed, so the cached box cannot vouch for the frame.
+      if (!force
+        && box.top === viewportBox.top
         && box.left === viewportBox.left
         && box.width === viewportBox.width
         && box.height === viewportBox.height
@@ -5389,6 +5398,16 @@
       if (isZenActive()) setZen(false);
     });
 
+    function refreshViewport() {
+      syncKeyboard();
+      syncZenViewport(true);
+      grow();
+      scheduleRender();
+      kickCaret();
+      syncFormatBar();
+      if (formatBubble && !formatBubble.hidden) scheduleBubble();
+    }
+
     window.addEventListener("resize", function () {
       syncKeyboard();
       syncZenViewport();
@@ -5398,6 +5417,39 @@
       syncFormatBar();
       if (formatBubble && !formatBubble.hidden) scheduleBubble();
     });
+
+    /* Kembali dari latar belakang
+       ----------------------------------------------------------
+       Saat aplikasi disembunyikan sistem, Android membekukan halaman dan
+       tidak selalu mengirim resize ketika halaman dihidupkan lagi. Bingkai
+       ruang tulis, kelas has-keyboard, dan tinggi area tulis tetap memakai
+       ukuran dari sebelum aplikasi ditinggalkan: bilah format bisa duduk di
+       tempat keyboard yang sudah tidak ada, dan padding kolom terlihat
+       meleset sampai aplikasi ditutup lalu dibuka lagi — boot ulang selalu
+       mengukur dari nol.
+
+       Jadi ukur ulang setiap kali halaman kembali terlihat, dan ulangi
+       beberapa kali: nilai visualViewport di Android baru benar setelah
+       beberapa bingkai, bukan pada event pertama. */
+
+    var resumeTimers = [];
+    var RESUME_SETTLE_DELAYS = [0, 60, 180, 420, 900];
+
+    function handleResume() {
+      if (document.visibilityState !== "visible") return;
+
+      resumeTimers.forEach(function (timer) { window.clearTimeout(timer); });
+      resumeTimers = RESUME_SETTLE_DELAYS.map(function (delay) {
+        return window.setTimeout(refreshViewport, delay);
+      });
+    }
+
+    document.addEventListener("visibilitychange", handleResume);
+    // Safari/iOS memulihkan halaman dari back-forward cache tanpa boot ulang.
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted) handleResume();
+    });
+    window.addEventListener("focus", handleResume);
 
     /* -------------------------------------------------------------
        Pembaruan aplikasi
@@ -5541,5 +5593,9 @@
     boot();
     setZen(true);
     checkForUpdate();
+
+    // Latar belakang bukan satu-satunya jalan kembali: frame pertama setelah
+    // boot bisa lebih kecil dari layar selama bilah sistem masih turun.
+    window.setTimeout(refreshViewport, 300);
   });
 })();
